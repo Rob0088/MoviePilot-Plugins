@@ -794,7 +794,7 @@ class DynamicWeChat(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud记得在设置打开“本地CookieCloud”。'
+                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud请到设置打开“本地CookieCloud”。'
                                         }
                                     }
                                 ]
