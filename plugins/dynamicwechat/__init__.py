@@ -393,15 +393,15 @@ class DynamicWeChat(_PluginBase):
                 # else:
                 #     logger.info("给浏览器添加cookie失败")
                 page = context.new_page()
-                logger.info("----尝试延长cookie有效期----")
+                logger.info("-尝试延长cookie有效期-")
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 # 检查登录元素是否可见
                 if self.check_login_status(page):
-                    logger.info("----延长cookie有效期成功----")
+                    logger.info("-延长cookie有效期成功-")
                     self._cookie_valid = True
                 else:
-                    logger.info("----cookie已失效，下次IP变动推送二维码----")
+                    logger.info("-cookie已失效，下次IP变动推送二维码-")
                     self._cookie_valid = False
                 browser.close()
         except Exception as e:
@@ -688,7 +688,7 @@ class DynamicWeChat(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'use_cookiecloud',
-                                            'label': '使用CookieCloud获取cookie',
+                                            'label': '使用CookieCloud',
                                         }
                                     }
                                 ]
@@ -732,7 +732,7 @@ class DynamicWeChat(_PluginBase):
                                             'model': 'cookie_header',
                                             'label': 'COOKIE',
                                             'rows': 1,
-                                            'placeholder': '手动填写的cookie'
+                                            'placeholder': '手动填写cookie'
                                         }
                                     }
                                 ]
@@ -795,7 +795,28 @@ class DynamicWeChat(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新按钮和立即检测按钮是一次性按钮。优先使用cookie，当cookie失效且填写两个token时，推送登录二维码到微信'
+                                            'text': '* 强制更新按钮和立即检测按钮属于一次性按钮。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    # 新增的 VAlert 说明文本
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'text': '本插件优先使用cookie，当cookie失效且填写两个token时会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
