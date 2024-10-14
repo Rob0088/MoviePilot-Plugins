@@ -60,11 +60,11 @@ class DynamicWeChat(_PluginBase):
     #企业微信登录
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
     #检测间隔时间,默认10分钟
-    _refresh_cron = '*/10 * * * *'
+    _refresh_cron = '*/20 * * * *'
     # _urls = []
     _helloimg_s_token = ""
     _pushplus_token = ""
-    _standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
+    # _standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
     _qr_code_image = None
     text = ""
     user_id = ""
@@ -72,7 +72,7 @@ class DynamicWeChat(_PluginBase):
 
     # -------cookie add------------
     # cookie有效检测
-    _cookie_valid = False
+    # _cookie_valid = False
     # 使用CookieCloud开关
     _use_cookiecloud = True
     # 从CookieCloud获取的cookie
@@ -93,10 +93,10 @@ class DynamicWeChat(_PluginBase):
         # self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
-        self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
+        # self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
         self._ip_changed = True
         self._forced_update = False
-        self._cookie_valid = False
+        # self._cookie_valid = False
         self._use_cookiecloud = True
         self._cookie_header = ""
         self._cookie_from_CC = ""
@@ -115,7 +115,7 @@ class DynamicWeChat(_PluginBase):
             self._forced_update = config.get("forced_update")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
-            self._standalone_chrome_address = config.get("standalone_chrome_address")
+            # self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
         if self._use_cookiecloud:
             self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
@@ -290,6 +290,8 @@ class DynamicWeChat(_PluginBase):
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
                             self.enter_public_ip(page)
+                        else:
+                            self._ip_changed = False
                     else:
                         logger.info("cookie失效，请使用cookiecloud重新上传。")
                 else:  # 如果直接进入企业微信
@@ -301,7 +303,7 @@ class DynamicWeChat(_PluginBase):
                         self.enter_public_ip(page)
                     else:
                         # ----------cookie END-----------------
-                        logger.error("未找到二维码图片/同时cookie失效。")
+                        # logger.error("用登录/cookie失效。")
                         self._ip_changed = False
                         return
                 browser.close()
@@ -398,15 +400,15 @@ class DynamicWeChat(_PluginBase):
                 time.sleep(3)
                 # 检查登录元素是否可见
                 if self.check_login_status(page):
-                    logger.info("-延长cookie有效期成功-")
-                    self._cookie_valid = True
+                    logger.info("延长cookie任务成功")
+                    # self._cookie_valid = True
                 else:
-                    logger.info("-cookie已失效，下次IP变动推送二维码-")
-                    self._cookie_valid = False
+                    logger.info("cookie已失效，下次IP变动推送二维码")
+                    # self._cookie_valid = False
                 browser.close()
         except Exception as e:
             logger.error(f"cookie校验失败:{e}")
-            self._cookie_valid = False
+            # self._cookie_valid = False
 
     def enter_public_ip(self, page):
         time.sleep(2)  # 等待页面加载
@@ -445,21 +447,11 @@ class DynamicWeChat(_PluginBase):
             pass
 
         try:
-            if self.find_qrc(page):
-                logger.error(f"用户没有扫码/发送验证码或cookie失效")
-                self._ip_changed = False
-                return False
-        except Exception as e:
-            # logger.error(f"检查登录状态时发生错误: {e}")
-            pass
-        try:
             # 在这里使用更安全的方式来检查元素是否存在
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
                 time.sleep(10)  # 多等10秒
                 logger.info("需要短信验证 收到的短信验证码：" + self.text[:6])
-                # captcha_input = page.wait_for_selector('.inner_input', timeout=5000)  # 获取验证码输入框
-                # captcha_input.fill(self.text[:6])  # 输入短信验证码
                 for digit in self.text[:6]:
                     page.keyboard.press(digit)
                     time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
@@ -472,9 +464,15 @@ class DynamicWeChat(_PluginBase):
                 if success_element:
                     logger.info("验证码登录成功！")
                     return True
+            else:   # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
+                try:
+                    if self.find_qrc(page):
+                        logger.error(f"用户没有扫码或发送验证码")
+                        return False
+                except Exception as e:
+                    pass
         except Exception as e:
             logger.error(f"短信验证登录时发生错误: {e}")
-            self._ip_changed = False
             pass
 
     def click_button(self, page, xpath, button_name):
@@ -573,12 +571,12 @@ class DynamicWeChat(_PluginBase):
                 if response_data['message'] == "Unauthenticated.":
                     logger.error("Token失效，无法上传图片。请检查你的上传Token。")
                     logger.info(f"使用的Token: {helloimg_token}")
-                    self._ip_changed = False
+                    # self._ip_changed = False
                     return
                 else:
                     logger.error(f"上传到图床失败: {response_data['message']}")
-                    self._ip_changed = False
-                    return
+                self._ip_changed = False
+                return
 
             img_src = response_data['data']['links']['html']
             return img_src.split('"')[1], refuse_time  # 提取 img src
@@ -602,7 +600,7 @@ class DynamicWeChat(_PluginBase):
             "forced_update": self._forced_update,
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
-            "standalone_chrome_address": self._standalone_chrome_address,
+            # "standalone_chrome_address": self._standalone_chrome_address,
 
             "cookie_from_CC": self._cookie_from_CC,
             "cookie_header": self._cookie_header,
