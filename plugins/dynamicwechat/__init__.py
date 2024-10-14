@@ -94,7 +94,7 @@ class DynamicWeChat(_PluginBase):
         self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
-        self._app_ids = ""
+        self._app_ids = "5620000000000025"
         # self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
         self._ip_changed = True
         self._forced_update = False
@@ -120,6 +120,8 @@ class DynamicWeChat(_PluginBase):
             # self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
         self._urls = self._app_ids.split(',')
+        # if self._app_ids:
+        #     self._urls = self._app_ids.split(',')
         if self._use_cookiecloud:
             self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
                                             password=settings.COOKIECLOUD_PASSWORD)
