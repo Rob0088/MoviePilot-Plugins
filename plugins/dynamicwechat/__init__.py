@@ -194,8 +194,8 @@ class DynamicWeChat(_PluginBase):
             if ip_address != "获取IP失败" and ip_address:
                 logger.info(f"IP获取成功: {url}: {ip_address}")
                 break
-            else:
-                logger.error(f"请求网址失败")
+        # if ip_address == "获取IP失败" or not ip_address:
+        #     logger.error(f"请求网址失败")
 
         # 如果所有 URL 请求失败
         if ip_address == "获取IP失败" or not ip_address:
@@ -393,7 +393,7 @@ class DynamicWeChat(_PluginBase):
                 # else:
                 #     logger.info("给浏览器添加cookie失败")
                 page = context.new_page()
-                logger.info("-尝试延长cookie有效期-")
+                # logger.info("-尝试延长cookie有效期-")
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 # 检查登录元素是否可见
@@ -739,7 +739,6 @@ class DynamicWeChat(_PluginBase):
                             }
                         ]
                     },
-                    # 将 pushplus_token 和 helloimg_s_token 放在同一行
                     {
                         'component': 'VRow',
                         'content': [
@@ -795,14 +794,13 @@ class DynamicWeChat(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。勾选使用CookieCloud记得在设置打开本地CookieCloud。'
+                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud记得在设置打开“本地CookieCloud”。'
                                         }
                                     }
                                 ]
                             }
                         ]
                     },
-                    # 新增的 VAlert 说明文本
                     {
                         'component': 'VRow',
                         'content': [
@@ -816,7 +814,7 @@ class DynamicWeChat(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当cookie失效且填写两个token时会推送登录二维码到微信。',
+                                            'text': '本插件优先使用cookie，当cookie失效同时填写两个token时会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
