@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.3"
+    plugin_version = "1.0.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -109,7 +109,7 @@ class DynamicWeChat(_PluginBase):
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
-            self._app_ids = config.get("app_ids")
+            self._app_ids = config.get("app_ids", '5620000000000025')
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
@@ -120,8 +120,6 @@ class DynamicWeChat(_PluginBase):
             # self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
         self._urls = self._app_ids.split(',')
-        # if self._app_ids:
-        #     self._urls = self._app_ids.split(',')
         if self._use_cookiecloud:
             self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
                                             password=settings.COOKIECLOUD_PASSWORD)
