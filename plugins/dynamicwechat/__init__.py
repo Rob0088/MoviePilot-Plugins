@@ -117,7 +117,7 @@ class DynamicWeChat(_PluginBase):
             self._cookie_header = config.get("cookie_header")
             self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
-        if self._cookiecloud:
+        if self._use_cookiecloud:
             self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
                                             password=settings.COOKIECLOUD_PASSWORD)
 
