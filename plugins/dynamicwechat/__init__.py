@@ -61,7 +61,8 @@ class DynamicWeChat(_PluginBase):
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
     #检测间隔时间,默认10分钟
     _refresh_cron = '*/20 * * * *'
-    # _urls = []
+    _app_ids = f"5620000000000025"
+    _urls = []
     _helloimg_s_token = ""
     _pushplus_token = ""
     # _standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
@@ -90,9 +91,10 @@ class DynamicWeChat(_PluginBase):
         self._server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
         # 清空配置
         # self._wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
-        # self._urls = []
+        self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
+        self._app_ids = f"5620000000000025"
         # self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
         self._ip_changed = True
         self._forced_update = False
@@ -107,7 +109,7 @@ class DynamicWeChat(_PluginBase):
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
-            # self._wechatUrl = config.get("wechatUrl")
+            self._app_ids = config.get("app_ids")
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
@@ -117,6 +119,7 @@ class DynamicWeChat(_PluginBase):
             self._cookie_header = config.get("cookie_header")
             # self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
+        self._urls = self._app_ids.split(',')
         if self._use_cookiecloud:
             self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
                                             password=settings.COOKIECLOUD_PASSWORD)
@@ -475,38 +478,31 @@ class DynamicWeChat(_PluginBase):
             logger.error(f"短信验证登录时发生错误: {e}")
             pass
 
-    def click_button(self, page, xpath, button_name):
-        time.sleep(1)
-        try:
-            # 等待按钮出现并可点击
-            button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
-            button.click()
-            # logger.info(f"已点击 '{button_name}' 按钮")
-            return True
-        except Exception as e:
-            logger.error(f"未能找到或点击 '{button_name}' 按钮: {e}")
-            self._ip_changed = False
-
     def click_app_management_buttons(self, page):
-        """
-        查找并点击页面中的 '应用管理' 按钮，然后点击 'MoviePilot' 按钮，最后点击 '配置' 按钮。
-        """
-        time.sleep(2)
+        prefix_url = f"https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
         # 按钮的选择器和名称
         buttons = [
-            ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
-            ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
+            # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
+            # ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
             (
             "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
             "配置")
         ]
+        for app_id in self._urls:
+            id_page = prefix_url + app_id
+            page.goto(id_page)   # 跳转到应用详情页
+            time.sleep(2)
+            # 依次点击每个按钮
+            for xpath, name in buttons:
+                # 等待按钮出现并可点击
+                try:
+                    button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
+                    button.click()
+                except Exception as e:
+                    logger.error(f"未能找到或点击 '{name}' 按钮: {e}")
+                    self._ip_changed = False
+                    return
 
-        # 依次点击每个按钮
-        for xpath, name in buttons:
-            if not self.click_button(page, xpath, name):
-                logger.error(f"未能找到 '{name}' 按钮，终止")
-                self._ip_changed = False
-                return  # 如果未能找到按钮，提前结束操作
 
     def send_pushplus_message(self, title, content):
         pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
@@ -594,7 +590,7 @@ class DynamicWeChat(_PluginBase):
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
             "cron": self._cron,
-            # "wechatUrl": self._wechatUrl,
+            "app_ids": self._app_ids,
             "current_ip_address": self._current_ip_address,
             "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
@@ -743,6 +739,28 @@ class DynamicWeChat(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'app_ids',
+                                            'label': '应用 IDs',
+                                            'rows': 1,
+                                            'placeholder': '请输入app_id，多个以英文逗号分隔'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                     'md': 6
                                 },
@@ -792,7 +810,7 @@ class DynamicWeChat(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud请到设置打开“本地CookieCloud”。'
+                                            'text': '*强制更新和立即检测按钮属于一次性按钮 *使用CookieCloud请到设置打开“本地CookieCloud” *应用ID在企业微信应用页url末尾获取'
                                         }
                                     }
                                 ]
@@ -826,13 +844,14 @@ class DynamicWeChat(_PluginBase):
             "cron": "",
             "onlyonce": False,
             "forceUpdate": False,
-            "use_cookiecloud": True,  # 新增的模型字段
-            # "wechatUrl": "",
+            "use_cookiecloud": True,
             "cookie_header": "",
             "pushplus_token": "",
             "helloimg_token": "",
-            "standalone_chrome_address": ""
+            "standalone_chrome_address": "",
+            "app_ids": ""
         }
+
 
     def get_page(self) -> List[dict]:
         pass
