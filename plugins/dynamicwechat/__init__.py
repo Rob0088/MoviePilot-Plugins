@@ -293,7 +293,7 @@ class DynamicWeChat(_PluginBase):
                         else:
                             self._ip_changed = False
                     else:
-                        logger.info("cookie失效，请使用cookiecloud重新上传。")
+                        logger.info("cookie失效，请使用CookieCloud重新上传。")
                 else:  # 如果直接进入企业微信
                     logger.info("尝试cookie登录")
                     # ----------cookie addd-----------------
@@ -339,6 +339,8 @@ class DynamicWeChat(_PluginBase):
                                  settings.COOKIECLOUD_PASSWORD)
             except Exception as e:
                 logger.error(f"更新cookie发生错误: {e}")
+        else:
+            logger.info("不使用CookieCloud, 不刷新cookie")
 
     # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
@@ -451,25 +453,29 @@ class DynamicWeChat(_PluginBase):
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
                 time.sleep(10)  # 多等10秒
-                logger.info("需要短信验证 收到的短信验证码：" + self.text[:6])
-                for digit in self.text[:6]:
-                    page.keyboard.press(digit)
-                    time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
-                confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
-                confirm_button.click()  # 点击确认
-                time.sleep(3)  # 等待处理
-                # 等待登录成功的元素出现
-                success_element = page.wait_for_selector('#check_corp_info', timeout=10000)
-                if success_element:
-                    logger.info("验证码登录成功！")
-                    return True
-        except Exception as e:
-            try:  # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
-                if self.find_qrc(page):
-                    logger.error(f"用户没有扫码或发送验证码")
+                if self.text[:6]:
+                    logger.info("需要短信验证 收到的短信验证码：" + self.text[:6])
+                    for digit in self.text[:6]:
+                        page.keyboard.press(digit)
+                        time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
+                    confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
+                    confirm_button.click()  # 点击确认
+                    time.sleep(3)  # 等待处理
+                    # 等待登录成功的元素出现
+                    success_element = page.wait_for_selector('#check_corp_info', timeout=10000)
+                    if success_element:
+                        logger.info("验证码登录成功！")
+                        return True
+                else:
+                    logger.error("未收到短信验证码")
                     return False
-            except Exception as e:
-                pass
+        except Exception as e:
+            # try:  # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
+            if self.find_qrc(page):
+                logger.error(f"用户没有扫描二维码")
+                return False
+            # except Exception as e:
+            #     return False
 
     def click_button(self, page, xpath, button_name):
         time.sleep(1)
