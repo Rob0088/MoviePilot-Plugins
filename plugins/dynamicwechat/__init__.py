@@ -25,7 +25,7 @@ class DynamicWeChat(_PluginBase):
     # 插件名称
     plugin_name = "修改企业微信可信IP"
     # 插件描述
-    plugin_desc = "手机微信修改可信IP和更新cookie。验证码以？结尾发给企业微信应用。如：110301？"
+    plugin_desc = "依赖cookie修改可信IP，当填写两个token时，手机微信可以更新cookie。验证码以？结尾发给企业微信应用。如：110301？"
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
