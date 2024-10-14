@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.5"
+    plugin_version = "1.0.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -458,22 +458,18 @@ class DynamicWeChat(_PluginBase):
                 confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
                 confirm_button.click()  # 点击确认
                 time.sleep(3)  # 等待处理
-
                 # 等待登录成功的元素出现
                 success_element = page.wait_for_selector('#check_corp_info', timeout=10000)
                 if success_element:
                     logger.info("验证码登录成功！")
                     return True
-            else:   # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
-                try:
-                    if self.find_qrc(page):
-                        logger.error(f"用户没有扫码或发送验证码")
-                        return False
-                except Exception as e:
-                    pass
         except Exception as e:
-            logger.error(f"短信验证登录时发生错误: {e}")
-            pass
+            try:  # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
+                if self.find_qrc(page):
+                    logger.error(f"用户没有扫码或发送验证码")
+                    return False
+            except Exception as e:
+                pass
 
     def click_button(self, page, xpath, button_name):
         time.sleep(1)
