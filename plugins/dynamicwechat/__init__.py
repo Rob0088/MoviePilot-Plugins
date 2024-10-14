@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -94,7 +94,7 @@ class DynamicWeChat(_PluginBase):
         self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
-        self._app_ids = f"5620000000000025"
+        self._app_ids = ""
         # self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
         self._ip_changed = True
         self._forced_update = False
@@ -849,7 +849,7 @@ class DynamicWeChat(_PluginBase):
             "pushplus_token": "",
             "helloimg_token": "",
             "standalone_chrome_address": "",
-            "app_ids": "5620000000000025"
+            "app_ids": ""
         }
 
 
