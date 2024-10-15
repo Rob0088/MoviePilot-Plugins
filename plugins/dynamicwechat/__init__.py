@@ -430,7 +430,7 @@ class DynamicWeChat(_PluginBase):
                 # else:
                 #     logger.info("给浏览器添加cookie失败")
                 page = context.new_page()
-                # logger.info("-尝试延长cookie有效期-")
+                logger.info("延长cookie任务开始")
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 # 检查登录元素是否可见
@@ -526,6 +526,9 @@ class DynamicWeChat(_PluginBase):
                         self._ip_changed = False
                         if "disabled" in str(e):
                             logger.info("该应用已被禁用,可能是没有设置接收api")
+            return
+        else:
+            logger.error("未找到应用id，修改IP失败")
             return
 
     def send_pushplus_message(self, title, content):

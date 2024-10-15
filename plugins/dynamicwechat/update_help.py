@@ -64,7 +64,6 @@ class PyCookieCloud:
         self.uuid: str = uuid
         self.password: str = password
 
-
     def check_connection(self) -> bool:
         """
         Test the connection to the CookieCloud server.
