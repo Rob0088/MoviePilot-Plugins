@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.10"
+    plugin_version = "1.0.11"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -517,6 +517,8 @@ class DynamicWeChat(_PluginBase):
                         button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
                         button.click()
                         logger.info(f"已点击 '{name}' 按钮")
+                        page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=10000)
+                        logger.info(f"已找到文本框")
                         self.enter_public_ip(page)
                     except Exception as e:
                         logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
