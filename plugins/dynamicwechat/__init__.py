@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.12"
+    plugin_version = "1.1.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -303,10 +303,8 @@ class DynamicWeChat(_PluginBase):
                     login_status = self.check_login_status(page)
                     if login_status:
                         self.click_app_management_buttons(page)
-                        # self.enter_public_ip(page)
                     else:
                         # ----------cookie END-----------------
-                        # logger.error("用登录/cookie失效。")
                         self._ip_changed = False
                         return
                 browser.close()
@@ -415,26 +413,6 @@ class DynamicWeChat(_PluginBase):
             logger.error(f"cookie校验失败:{e}")
             # self._cookie_valid = False
 
-    def enter_public_ip(self, page):
-        time.sleep(2)  # 等待页面加载
-        try:
-            # 找到文本框并输入 IP 地址
-            ip_textarea = page.wait_for_selector("//textarea[@class='js_ipConfig_textarea']", timeout=5000)
-            ip_textarea.fill(self._current_ip_address)  # 填充 IP 地址
-            logger.info("已输入公网IP：" + self._current_ip_address)
-            time.sleep(3)  # 等待输入完成
-
-            # 点击确定按钮
-            confirm_button = page.wait_for_selector(
-                "//a[@class='qui_btn ww_btn ww_btn_Blue js_ipConfig_confirmBtn']", timeout=5000)
-            confirm_button.click()  # 点击确认按钮
-            # logger.info("已点击确定按钮")
-            time.sleep(3)  # 等待处理
-            self._ip_changed = True
-
-        except Exception as e:
-            logger.error(f"未能找到或输入文本框或者确认按钮：{e}")
-
     #
     def check_login_status(self, page):
         # 等待页面加载
@@ -477,24 +455,9 @@ class DynamicWeChat(_PluginBase):
             if self.find_qrc(page):
                 logger.error(f"用户没有扫描二维码")
                 return False
-            # except Exception as e:
-            #     return False
-
-    def click_button(self, page, xpath, button_name):
-        time.sleep(1)
-        try:
-            # 等待按钮出现并可点击
-            button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
-            button.click()
-            # logger.info(f"已点击 '{button_name}' 按钮")
-            return True
-        except Exception as e:
-            logger.error(f"未能找到或点击 '{button_name}' 按钮: {e}")
-            self._ip_changed = False
 
     def click_app_management_buttons(self, page):
         bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
-        # time.sleep(2)
         # 按钮的选择器和名称
         buttons = [
             # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
@@ -516,8 +479,8 @@ class DynamicWeChat(_PluginBase):
                     try:
                         button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
                         button.click()
-                        logger.info(f"已点击 '{name}' 按钮")
-                        page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=10000)
+                        # logger.info(f"已点击 '{name}' 按钮")
+                        page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
                         # logger.info(f"已找到文本框")
                         input_area = page.locator('textarea.js_ipConfig_textarea')
                         confirm = page.locator('.js_ipConfig_confirmBtn')
@@ -526,11 +489,12 @@ class DynamicWeChat(_PluginBase):
                         confirm.click()  # 点击确认按钮
                         time.sleep(3)  # 等待处理
                         self._ip_changed = True
-                        # self.enter_public_ip(page)
                     except Exception as e:
-                        logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
+                        logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
                         self._ip_changed = False
-                        return
+                        if "disabled" in str(e):
+                            logger.info("该应用已被禁用,可能是没有设置接收api")
+            return
 
     def send_pushplus_message(self, title, content):
         pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
