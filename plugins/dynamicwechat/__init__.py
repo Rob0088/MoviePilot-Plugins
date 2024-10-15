@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.9"
+    plugin_version = "1.0.10"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -292,7 +292,7 @@ class DynamicWeChat(_PluginBase):
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
-                            self.enter_public_ip(page)
+
                         else:
                             self._ip_changed = False
                     else:
@@ -303,7 +303,7 @@ class DynamicWeChat(_PluginBase):
                     login_status = self.check_login_status(page)
                     if login_status:
                         self.click_app_management_buttons(page)
-                        self.enter_public_ip(page)
+                        # self.enter_public_ip(page)
                     else:
                         # ----------cookie END-----------------
                         # logger.error("用登录/cookie失效。")
@@ -517,6 +517,7 @@ class DynamicWeChat(_PluginBase):
                         button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
                         button.click()
                         logger.info(f"已点击 '{name}' 按钮")
+                        self.enter_public_ip(page)
                     except Exception as e:
                         logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
                         self._ip_changed = False
