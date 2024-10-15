@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -62,6 +62,7 @@ class DynamicWeChat(_PluginBase):
     #检测间隔时间,默认10分钟
     _refresh_cron = '*/20 * * * *'
     # _urls = []
+    _input_id_list = ''
     _helloimg_s_token = ""
     _pushplus_token = ""
     # _standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
@@ -69,6 +70,7 @@ class DynamicWeChat(_PluginBase):
     text = ""
     user_id = ""
     channel = ""
+    _app_ids = []
 
     # -------cookie add------------
     # cookie有效检测
@@ -98,6 +100,7 @@ class DynamicWeChat(_PluginBase):
         self._forced_update = False
         # self._cookie_valid = False
         self._use_cookiecloud = True
+        self._input_id_list = ''
         self._cookie_header = ""
         self._cookie_from_CC = ""
         self._current_ip_address = self.get_ip_from_url(self._ip_urls[0])
@@ -107,7 +110,7 @@ class DynamicWeChat(_PluginBase):
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
-            # self._wechatUrl = config.get("wechatUrl")
+            self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
@@ -490,25 +493,32 @@ class DynamicWeChat(_PluginBase):
             self._ip_changed = False
 
     def click_app_management_buttons(self, page):
-        """
-        查找并点击页面中的 '应用管理' 按钮，然后点击 'MoviePilot' 按钮，最后点击 '配置' 按钮。
-        """
-        time.sleep(2)
+        bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
+        # time.sleep(2)
         # 按钮的选择器和名称
         buttons = [
-            ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
-            ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
+            # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
+            # ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
             (
             "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
             "配置")
         ]
-
-        # 依次点击每个按钮
-        for xpath, name in buttons:
-            if not self.click_button(page, xpath, name):
-                logger.error(f"未能找到 '{name}' 按钮，终止")
-                self._ip_changed = False
-                return  # 如果未能找到按钮，提前结束操作
+        if self._input_id_list:
+            id_list = self._input_id_list.split(",")
+            app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
+            for app_url in app_urls:
+                page.goto(app_url)    # 打开应用详情页
+                time.sleep(2)
+                # 依次点击每个按钮
+                for xpath, name in buttons:
+                    # 等待按钮出现并可点击
+                    try:
+                        button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
+                        button.click()
+                    except Exception as e:
+                        logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
+                        self._ip_changed = False
+                        return
 
     def send_pushplus_message(self, title, content):
         pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
@@ -602,6 +612,7 @@ class DynamicWeChat(_PluginBase):
             "forced_update": self._forced_update,
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
+            "input_id_list": self._input_id_list,
             # "standalone_chrome_address": self._standalone_chrome_address,
 
             "cookie_from_CC": self._cookie_from_CC,
@@ -745,6 +756,28 @@ class DynamicWeChat(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'input_id_list',
+                                            'label': '应用ID',
+                                            'rows': 1,
+                                            'placeholder': '输入应用ID，多个ID用英文逗号分隔。在企业微信应用页面URL末尾获取'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                     'md': 6
                                 },
@@ -833,6 +866,7 @@ class DynamicWeChat(_PluginBase):
             "cookie_header": "",
             "pushplus_token": "",
             "helloimg_token": "",
+            "input_id_list": "",
             "standalone_chrome_address": ""
         }
 
