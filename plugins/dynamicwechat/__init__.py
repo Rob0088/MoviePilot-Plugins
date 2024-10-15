@@ -855,7 +855,7 @@ class DynamicWeChat(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当cookie失效同时填写两个token时会推送登录二维码到微信。',
+                                            'text': '本插件优先使用cookie，当需要修改IP时cookie失效填写了两个token时会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
@@ -898,7 +898,7 @@ class DynamicWeChat(_PluginBase):
     def get_command() -> List[Dict[str, Any]]:
         return [
             {
-                "cmd": "/push_qr",
+                "cmd": "/push_qr_code",
                 "event": EventType.PluginAction,
                 "desc": "立即推送登录二维码到微信",
                 "category": "",
