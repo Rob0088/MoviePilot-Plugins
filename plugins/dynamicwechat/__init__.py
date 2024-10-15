@@ -480,17 +480,17 @@ class DynamicWeChat(_PluginBase):
             # except Exception as e:
             #     return False
 
-    def click_button(self, page, xpath, button_name):
-        time.sleep(1)
-        try:
-            # 等待按钮出现并可点击
-            button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
-            button.click()
-            # logger.info(f"已点击 '{button_name}' 按钮")
-            return True
-        except Exception as e:
-            logger.error(f"未能找到或点击 '{button_name}' 按钮: {e}")
-            self._ip_changed = False
+    # def click_button(self, page, xpath, button_name):
+    #     time.sleep(1)
+    #     try:
+    #         # 等待按钮出现并可点击
+    #         button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
+    #         button.click()
+    #         # logger.info(f"已点击 '{button_name}' 按钮")
+    #         return True
+    #     except Exception as e:
+    #         logger.error(f"未能找到或点击 '{button_name}' 按钮: {e}")
+    #         self._ip_changed = False
 
     def click_app_management_buttons(self, page):
         bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
@@ -507,18 +507,20 @@ class DynamicWeChat(_PluginBase):
             id_list = self._input_id_list.split(",")
             app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
             for app_url in app_urls:
-                page.goto(app_url)    # 打开应用详情页
-                time.sleep(2)
-                # 依次点击每个按钮
-                for xpath, name in buttons:
-                    # 等待按钮出现并可点击
-                    try:
+                try:
+                    page.goto(app_url)    # 打开应用详情页
+                    logger.info(f"已打开{app_url}")
+                    time.sleep(2)
+                    # 依次点击每个按钮
+                    for xpath, name in buttons:
+                        # 等待按钮出现并可点击
                         button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
                         button.click()
-                    except Exception as e:
-                        logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
-                        self._ip_changed = False
-                        return
+                        logger.info(f"已点击 '{name}' 按钮")
+                except Exception as e:
+                    logger.error(f"未能找打开{app_url}或点击按钮失败: {e}")
+                    self._ip_changed = False
+                    return
 
     def send_pushplus_message(self, title, content):
         pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
