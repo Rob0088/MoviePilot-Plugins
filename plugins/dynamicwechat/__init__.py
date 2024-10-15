@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.0"
+    plugin_version = "1.1.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -50,6 +50,7 @@ class DynamicWeChat(_PluginBase):
     # 强制更改IP
     _forced_update = False
     _cc_server = None
+    _push_qr_now = False
 
     #匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -265,6 +266,37 @@ class DynamicWeChat(_PluginBase):
                 return False
         except Exception as e:
             return False
+
+    def remote_push_qr(self):
+        try:
+            with sync_playwright() as p:
+                # 启动 Chromium 浏览器并设置语言为中文
+                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                context = browser.new_context()
+                # ----------cookie addd-----------------
+                # cookie = self.get_cookie()
+                # if cookie:
+                #     context.add_cookies(cookie)
+                # ----------cookie END-----------------
+                page = context.new_page()
+                page.goto(self._wechatUrl)
+                time.sleep(3)
+                if self.find_qrc(page):
+                    if self._pushplus_token and self._helloimg_s_token:
+                        img_src, refuse_time = self.upload_image(self._qr_code_image)
+                        self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
+                        logger.info("二维码已经发送，等待用户 60 秒内扫码登录")
+                        logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                        time.sleep(60)
+                        login_status = self.check_login_status(page)
+                        if login_status:
+                            self._update_cookie(page, context)  # 刷新cookie
+                            self.click_app_management_buttons(page)
+                else:
+                    logger.warning("远程推送任务 未找到二维码")
+        except Exception as e:
+            logger.error(f"远程推送任务 推送二维码失败: {e}")
+
 
     def ChangeIP(self):
         logger.info("开始请求企业微信管理更改可信IP")
@@ -849,12 +881,37 @@ class DynamicWeChat(_PluginBase):
     def get_page(self) -> List[dict]:
         pass
 
+    @eventmanager.register(EventType.PluginAction)
+    def push_qr(self, event: Event = None):
+        """
+        发送二维码
+        """
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "push_qrcode":
+                return
+        logger.info("远程命令开始推送二维码")
+        self.remote_push_qr()
+
+
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [
+            {
+                "cmd": "/ChangeIP",
+                "event": EventType.PluginAction,
+                "desc": "立即推送登录二维码到微信",
+                "category": "",
+                "data": {
+                    "action": "push_qrcode"
+                }
+            }
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
+
+
 
     @eventmanager.register(EventType.UserMessage)
     def talk(self, event: Event):
@@ -864,8 +921,8 @@ class DynamicWeChat(_PluginBase):
         if not self._enabled:
             return
         self.text = event.event_data.get("text")
-        self.user_id = event.event_data.get("userid")
-        self.channel = event.event_data.get("channel")
+        # self.user_id = event.event_data.get("userid")
+        # self.channel = event.event_data.get("channel")
         if self.text and len(self.text) == 7:
             logger.info(f"收到验证码：{self.text}")
         else:
