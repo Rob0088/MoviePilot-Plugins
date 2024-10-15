@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.1"
+    plugin_version = "1.1.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -898,7 +898,7 @@ class DynamicWeChat(_PluginBase):
     def get_command() -> List[Dict[str, Any]]:
         return [
             {
-                "cmd": "/ChangeIP",
+                "cmd": "/push_qr",
                 "event": EventType.PluginAction,
                 "desc": "立即推送登录二维码到微信",
                 "category": "",
