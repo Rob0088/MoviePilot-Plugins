@@ -29,7 +29,7 @@ class DynamicWeChat(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.11"
+    plugin_version = "1.0.12"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -508,7 +508,7 @@ class DynamicWeChat(_PluginBase):
             app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
             for app_url in app_urls:
                 page.goto(app_url)    # 打开应用详情页
-                logger.info(f"已打开{app_url}")
+                # logger.info(f"已打开{app_url}")
                 time.sleep(2)
                 # 依次点击每个按钮
                 for xpath, name in buttons:
@@ -518,8 +518,15 @@ class DynamicWeChat(_PluginBase):
                         button.click()
                         logger.info(f"已点击 '{name}' 按钮")
                         page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=10000)
-                        logger.info(f"已找到文本框")
-                        self.enter_public_ip(page)
+                        # logger.info(f"已找到文本框")
+                        input_area = page.locator('textarea.js_ipConfig_textarea')
+                        confirm = page.locator('.js_ipConfig_confirmBtn')
+                        input_area.fill(self._current_ip_address)  # 填充 IP 地址
+                        logger.info("已输入公网IP：" + self._current_ip_address)
+                        confirm.click()  # 点击确认按钮
+                        time.sleep(3)  # 等待处理
+                        self._ip_changed = True
+                        # self.enter_public_ip(page)
                     except Exception as e:
                         logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮: {e}")
                         self._ip_changed = False
