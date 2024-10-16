@@ -66,12 +66,10 @@ class Dydebug(_PluginBase):
     _input_id_list = ''
     _helloimg_s_token = ""
     _pushplus_token = ""
-    # _standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
     _qr_code_image = None
     text = ""
-    user_id = ""
-    channel = ""
-    _app_ids = []
+    _verification_code = ''
+    # _app_ids = []
 
     # -------cookie add------------
     # cookie有效检测
@@ -96,7 +94,6 @@ class Dydebug(_PluginBase):
         # self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
-        # self._standalone_chrome_address = "http://192.168.1.0:4444/wd/hub"
         self._ip_changed = True
         self._forced_update = False
         # self._cookie_valid = False
@@ -119,11 +116,17 @@ class Dydebug(_PluginBase):
             self._forced_update = config.get("forced_update")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
-            # self._standalone_chrome_address = config.get("standalone_chrome_address")
             self._ip_changed = config.get("ip_changed")
         if self._use_cookiecloud:
-            self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
-                                            password=settings.COOKIECLOUD_PASSWORD)
+            if settings.COOKIECLOUD_ENABLE_LOCAL:
+                self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
+                                                password=settings.COOKIECLOUD_PASSWORD)
+            else:  # 使用设置里的cookieCloud
+                self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
+                                                password=settings.COOKIECLOUD_PASSWORD)
+            if not self._cc_server.check_connection():
+                self._cc_server = None
+                logger.error("没有可用的CookieCloud服务器")
 
         # 停止现有任务
         self.stop_service()
@@ -347,7 +350,7 @@ class Dydebug(_PluginBase):
             pass
 
     def _update_cookie(self, page, context):
-        if self._use_cookiecloud:
+        if self._use_cookiecloud and self._cc_server:
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
                 # logger.info("debug  开始连接CookieCloud")
@@ -373,7 +376,7 @@ class Dydebug(_PluginBase):
             except Exception as e:
                 logger.error(f"更新cookie发生错误: {e}")
         else:
-            logger.info("不使用CookieCloud, 不刷新cookie")
+            logger.info("CookieCloud配置错误, 不刷新cookie")
 
     # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
@@ -466,9 +469,9 @@ class Dydebug(_PluginBase):
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
                 time.sleep(30)  # 多等30秒
-                if self.text[:6]:
-                    logger.info("需要短信验证 收到的短信验证码：" + self.text[:6])
-                    for digit in self.text[:6]:
+                if self._verification_code:
+                    logger.info("需要短信验证 收到的短信验证码：" + self._verification_code)
+                    for digit in self._verification_code:
                         page.keyboard.press(digit)
                         time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
                     confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
@@ -624,7 +627,7 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            # "standalone_chrome_address": self._standalone_chrome_address,
+            # "standalone_chrome_address": self._diy_server,
 
             "cookie_from_CC": self._cookie_from_CC,
             "cookie_header": self._cookie_header,
@@ -838,7 +841,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud请到设置打开“本地CookieCloud”。'
+                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud信息请到设置请到‘设定’--‘站点’里填写'
                                         }
                                     }
                                 ]
@@ -858,7 +861,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当需要修改IP时cookie失效填写了两个token时会推送登录二维码到微信。',
+                                            'text': '本插件优先使用cookie，当需要修改IP 且 cookie失效 且 填写了两个token时，会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
@@ -872,13 +875,12 @@ class Dydebug(_PluginBase):
             "cron": "",
             "onlyonce": False,
             "forceUpdate": False,
-            "use_cookiecloud": True,  # 新增的模型字段
+            "use_cookiecloud": True,
             # "wechatUrl": "",
             "cookie_header": "",
             "pushplus_token": "",
             "helloimg_token": "",
             "input_id_list": "",
-            "standalone_chrome_address": ""
         }
 
     def get_page(self) -> List[dict]:
@@ -926,10 +928,11 @@ class Dydebug(_PluginBase):
         self.text = event.event_data.get("text")
         # self.user_id = event.event_data.get("userid")
         # self.channel = event.event_data.get("channel")
-        if self.text and len(self.text) == 7:
-            logger.info(f"收到验证码：{self.text}")
-        else:
-            logger.info(f"收到消息：{self.text}")
+        if self.text[:6].isdigit() and len(self.text) == 7:
+            self._verification_code = self.text[:6]
+            logger.info(f"收到验证码：{self._verification_code}")
+        # else:
+        #     logger.info(f"收到消息：{self.text}")
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -966,7 +969,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
 
 
 
