@@ -299,6 +299,7 @@ class Dydebug(_PluginBase):
                             self.click_app_management_buttons(page)
                 else:
                     logger.warning("远程推送任务 未找到二维码")
+            browser.close()
         except Exception as e:
             logger.error(f"远程推送任务 推送二维码失败: {e}")
 
@@ -744,28 +745,28 @@ class Dydebug(_PluginBase):
                             }
                         ]
                     },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'cookie_header',
-                                            'label': 'COOKIE',
-                                            'rows': 1,
-                                            'placeholder': '手动填写cookie'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                    # {
+                    #     'component': 'VRow',
+                    #     'content': [
+                    #         {
+                    #             'component': 'VCol',
+                    #             'props': {
+                    #                 'cols': 12
+                    #             },
+                    #             'content': [
+                    #                 {
+                    #                     'component': 'VTextarea',
+                    #                     'props': {
+                    #                         'model': 'cookie_header',
+                    #                         'label': 'COOKIE',
+                    #                         'rows': 1,
+                    #                         'placeholder': '手动填写cookie'
+                    #                     }
+                    #                 }
+                    #             ]
+                    #         }
+                    #     ]
+                    # },
                     {
                         'component': 'VRow',
                         'content': [
