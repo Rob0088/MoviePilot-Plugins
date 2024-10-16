@@ -25,7 +25,7 @@ class DynamicWeChat(_PluginBase):
     # 插件名称
     plugin_name = "修改企业微信可信IP"
     # 插件描述
-    plugin_desc = "依赖cookie修改可信IP，当填写两个token时，手机微信可以更新cookie。验证码以？结尾发给企业微信应用。如：110301？"
+    plugin_desc = "优先使用cookie，当填写两个第三方token时手机微信可以更新cookie。验证码以？结尾发给企业微信应用。如：110301？"
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
@@ -33,7 +33,7 @@ class DynamicWeChat(_PluginBase):
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
-    author_url = "https://github.com/RamenRa/DynamicWeChat"
+    author_url = "https://github.com/RamenRa/MoviePilot-Plugins"
     # 插件配置项ID前缀
     plugin_config_prefix = "dynamicwechat_"
     # 加载顺序
@@ -285,9 +285,9 @@ class DynamicWeChat(_PluginBase):
                     if self._pushplus_token and self._helloimg_s_token:
                         img_src, refuse_time = self.upload_image(self._qr_code_image)
                         self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
-                        logger.info("二维码已经发送，等待用户 60 秒内扫码登录")
+                        logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                        time.sleep(60)
+                        time.sleep(90)
                         login_status = self.check_login_status(page)
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
@@ -317,9 +317,9 @@ class DynamicWeChat(_PluginBase):
                     if self._pushplus_token and self._helloimg_s_token:
                         img_src, refuse_time = self.upload_image(self._qr_code_image)
                         self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
-                        logger.info("二维码已经发送，等待用户 60 秒内扫码登录")
+                        logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                        time.sleep(60)  # 等待用户扫码
+                        time.sleep(90)  # 等待用户扫码
                         login_status = self.check_login_status(page)
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
@@ -430,7 +430,7 @@ class DynamicWeChat(_PluginBase):
                 # else:
                 #     logger.info("给浏览器添加cookie失败")
                 page = context.new_page()
-                # logger.info("-尝试延长cookie有效期-")
+                logger.info("延长cookie任务开始")
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 # 检查登录元素是否可见
@@ -465,7 +465,7 @@ class DynamicWeChat(_PluginBase):
             # 在这里使用更安全的方式来检查元素是否存在
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
-                time.sleep(10)  # 多等10秒
+                time.sleep(30)  # 多等30秒
                 if self.text[:6]:
                     logger.info("需要短信验证 收到的短信验证码：" + self.text[:6])
                     for digit in self.text[:6]:
@@ -526,6 +526,9 @@ class DynamicWeChat(_PluginBase):
                         self._ip_changed = False
                         if "disabled" in str(e):
                             logger.info("该应用已被禁用,可能是没有设置接收api")
+            return
+        else:
+            logger.error("未找到应用id，修改IP失败")
             return
 
     def send_pushplus_message(self, title, content):
