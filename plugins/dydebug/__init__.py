@@ -121,9 +121,11 @@ class Dydebug(_PluginBase):
             if settings.COOKIECLOUD_ENABLE_LOCAL:
                 self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
                                                 password=settings.COOKIECLOUD_PASSWORD)
+                logger.info("使用内建CookieCloud服务器")
             else:  # 使用设置里的cookieCloud
                 self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
                                                 password=settings.COOKIECLOUD_PASSWORD)
+                logger.info("使用自定义CookieCloud服务器")
             if not self._cc_server.check_connection():
                 self._cc_server = None
                 logger.error("没有可用的CookieCloud服务器")
@@ -355,7 +357,7 @@ class Dydebug(_PluginBase):
             try:
                 # logger.info("debug  开始连接CookieCloud")
                 if self._cc_server.check_connection():
-                    logger.info("成功连接CookieCloud")
+                    # logger.info("成功连接CookieCloud")
                     current_url = page.url
                     current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
                     # logger.info("原始 cookies：", current_cookies)
@@ -376,7 +378,7 @@ class Dydebug(_PluginBase):
             except Exception as e:
                 logger.error(f"更新cookie发生错误: {e}")
         else:
-            logger.info("CookieCloud配置错误, 不刷新cookie")
+            logger.error("CookieCloud配置错误, 不刷新cookie")
 
     # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
@@ -841,7 +843,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud信息请到设置请到‘设定’--‘站点’里填写'
+                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud请到设置打开“本地CookieCloud”。'
                                         }
                                     }
                                 ]
@@ -861,7 +863,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当需要修改IP 且 cookie失效 且 填写了两个token时，会推送登录二维码到微信。',
+                                            'text': '本插件优先使用cookie，当需要修改IP时cookie失效填写了两个token时会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
