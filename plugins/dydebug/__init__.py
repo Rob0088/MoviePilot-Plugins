@@ -611,7 +611,6 @@ class Dydebug(_PluginBase):
             return img_src.split('"')[1], refuse_time  # 提取 img src
         except KeyError as e:
             logger.error(f"上传图片时解析响应失败: {e}, 响应内容: {response_data}")
-            logger.info("本次操作终止")
             self._ip_changed = False
             return
 
