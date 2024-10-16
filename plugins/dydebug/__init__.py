@@ -15,7 +15,7 @@ from app.plugins import _PluginBase
 from app.core.config import settings
 from app.helper.cookiecloud import CookieCloudHelper
 from typing import Tuple, List, Dict, Any
-from app.plugins.Dydebug.update_help import PyCookieCloud
+from app.plugins.dydebug.update_help import PyCookieCloud
 
 
 # import UpdateHelp
