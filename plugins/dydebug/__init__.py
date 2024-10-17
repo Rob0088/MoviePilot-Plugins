@@ -41,11 +41,11 @@ class Dydebug(_PluginBase):
     # 可使用的用户级别
     auth_level = 2
 
-    # 私有属性
+    # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
     _onlyonce = False
-    # IP更改成功状态,防止检测IP改动但cookie失效的时候_current_ip_address已经更新成新IP导致后面刷新cookie也没有更改企微IP
+    # IP更改成功状态
     _ip_changed = False
     # 强制更改IP
     _forced_update = False
@@ -146,7 +146,7 @@ class Dydebug(_PluginBase):
 
             # 固定半小时周期请求一次地址,防止cookie失效
             try:
-                self._scheduler.add_job(func=self.refresh_cookie,
+                self._scheduler.add_job(func=self.refresh_cookie(task="refresh_cookie"),
                                         trigger=CronTrigger.from_crontab(self._refresh_cron),
                                         name="延续企业微信cookie有效时间")
             except Exception as err:
@@ -424,7 +424,8 @@ class Dydebug(_PluginBase):
             })
         return cookies
 
-    def refresh_cookie(self):  # 保活
+    def refresh_cookie(self, *args, **kwargs):  # 保活
+        task = kwargs.get('task')  # 获取 src 参数
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=False, args=['--lang=zh-CN'])
@@ -432,36 +433,30 @@ class Dydebug(_PluginBase):
                 cookie = self.get_cookie()
                 if cookie:
                     context.add_cookies(cookie)
-                #     logger.info("给浏览器添加cookie成功")
-                # else:
-                #     logger.info("给浏览器添加cookie失败")
                 page = context.new_page()
-                logger.info("延长cookie任务开始")
                 page.goto(self._wechatUrl)
                 time.sleep(3)
-                # 检查登录元素是否可见
-                if self.check_login_status(page):
-                    logger.info("延长cookie任务成功")
-                    # self._cookie_valid = True
+                if self.check_login_status(page, task):
+                    pass
                 else:
                     logger.info("cookie已失效，下次IP变动推送二维码")
-                    # self._cookie_valid = False
                 browser.close()
         except Exception as e:
             logger.error(f"cookie校验失败:{e}")
-            # self._cookie_valid = False
 
     #
-    def check_login_status(self, page):
+    def check_login_status(self, page, task_src):
         # 等待页面加载
         time.sleep(3)
         # 检查是否需要进行短信验证
-        logger.info("检查登录状态...")
+        if task_src != 'refresh_cookie':
+            logger.info("检查登录状态...")
         try:
             # 先检查登录成功后的页面状态
             success_element = page.wait_for_selector('#check_corp_info', timeout=5000)  # 检查登录成功的元素
             if success_element:
-                logger.info("登录成功！")
+                if task_src != 'refresh_cookie':
+                    logger.info("登录成功！")
                 return True
         except Exception as e:
             # logger.error(f"检查登录状态时发生错误: {e}")
@@ -843,7 +838,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '* 强制更新和立即检测按钮属于一次性按钮。使用CookieCloud请到设置打开“本地CookieCloud”。'
+                                            'text': '*强制更新和立即检测按钮属于一次性按钮 *使用"设定"-"站点"中的CookieCloud设置 *Cookie Editor获取不到cookie关闭了手动输入框'
                                         }
                                     }
                                 ]
@@ -863,7 +858,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当需要修改IP时cookie失效填写了两个token时会推送登录二维码到微信。',
+                                            'text': '本插件优先使用cookie，当需要修改IP 且 cookie失效 且 填写了两个token时会推送登录二维码到微信。',
                                         }
                                     }
                                 ]
@@ -971,8 +966,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
 
 
 
