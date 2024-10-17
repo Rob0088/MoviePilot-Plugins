@@ -293,7 +293,7 @@ class Dydebug(_PluginBase):
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
-                        login_status = self.check_login_status(page)
+                        login_status = self.check_login_status(page, '')
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
@@ -326,7 +326,7 @@ class Dydebug(_PluginBase):
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)  # 等待用户扫码
-                        login_status = self.check_login_status(page)
+                        login_status = self.check_login_status(page, "")
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
@@ -338,7 +338,7 @@ class Dydebug(_PluginBase):
                 else:  # 如果直接进入企业微信
                     logger.info("尝试cookie登录")
                     # ----------cookie addd-----------------
-                    login_status = self.check_login_status(page)
+                    login_status = self.check_login_status(page, "")
                     if login_status:
                         self.click_app_management_buttons(page)
                     else:
