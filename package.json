@@ -6,10 +6,10 @@
     "version": "0.0.7",
     "icon": "Wecom_A.png",
     "author": "RamenRa",
-    "level": 2
+    "level": 2,
     "history": {
         "v0.0.7": "关闭cookie输入框，每20分钟延长cookie的任务成功时不输出日志，使用设定中的CookieCloud设置"
-}
+        }        
     }
 }
 
