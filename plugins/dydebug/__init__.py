@@ -29,7 +29,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.0.4"
+    plugin_version = "0.0.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -146,7 +146,7 @@ class Dydebug(_PluginBase):
 
             # 固定半小时周期请求一次地址,防止cookie失效
             try:
-                self._scheduler.add_job(func=self.refresh_cookie(task="refresh_cookie"),
+                self._scheduler.add_job(func=self.refresh_cookie,
                                         trigger=CronTrigger.from_crontab(self._refresh_cron),
                                         name="延续企业微信cookie有效时间")
             except Exception as err:
@@ -424,8 +424,7 @@ class Dydebug(_PluginBase):
             })
         return cookies
 
-    def refresh_cookie(self, *args, **kwargs):  # 保活
-        task = kwargs.get('task')  # 获取 src 参数
+    def refresh_cookie(self):  # 保活
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=False, args=['--lang=zh-CN'])
@@ -436,7 +435,7 @@ class Dydebug(_PluginBase):
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)
-                if self.check_login_status(page, task):
+                if self.check_login_status(page, task='refresh_cookie'):
                     pass
                 else:
                     logger.info("cookie已失效，下次IP变动推送二维码")
@@ -445,17 +444,17 @@ class Dydebug(_PluginBase):
             logger.error(f"cookie校验失败:{e}")
 
     #
-    def check_login_status(self, page, task_src):
+    def check_login_status(self, page, task):
         # 等待页面加载
         time.sleep(3)
         # 检查是否需要进行短信验证
-        if task_src != 'refresh_cookie':
+        if task != 'refresh_cookie':
             logger.info("检查登录状态...")
         try:
             # 先检查登录成功后的页面状态
             success_element = page.wait_for_selector('#check_corp_info', timeout=5000)  # 检查登录成功的元素
             if success_element:
-                if task_src != 'refresh_cookie':
+                if task != 'refresh_cookie':
                     logger.info("登录成功！")
                 return True
         except Exception as e:
@@ -966,6 +965,8 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
+
 
 
 
