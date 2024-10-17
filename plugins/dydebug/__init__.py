@@ -29,7 +29,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.0.6"
+    plugin_version = "0.0.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -837,7 +837,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '*强制更新和立即检测按钮属于一次性按钮 *使用"设定"-"站点"中的CookieCloud设置 *Cookie Editor获取不到cookie关闭了手动输入框'
+                                            'text': '强制更新和立即检测按钮是一次性按钮,使用设定中的CookieCloud设置，关闭了cookie手动输入框'
                                         }
                                     }
                                 ]
@@ -857,7 +857,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '本插件优先使用cookie，当需要修改IP 且 cookie失效 且 填写了两个token时会推送登录二维码到微信。',
+                                            'text': '优先使用cookie，当IP变动 且 cookie失效 且 填写了两个token才会调用API推送登录二维码。',
                                         }
                                     }
                                 ]
