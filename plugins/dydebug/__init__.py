@@ -1,5 +1,6 @@
 from app.core.event import eventmanager, Event
 import re
+import random
 import time
 import requests
 import io
@@ -193,18 +194,14 @@ class Dydebug(_PluginBase):
                               userid=event.event_data.get("user"))
 
     def CheckIP(self):
-        # if not self._cookie_valid:
-        #     self.refresh_cookie()
-        #     if not self._cookie_valid:
-        #         logger.error("请求企微失败,cookie可能过期,跳过IP检测")
-        #         return False
-        for url in self._ip_urls:
+        retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
+        ip_address = None
+
+        for url in retry_urls:
             ip_address = self.get_ip_from_url(url)
             if ip_address != "获取IP失败" and ip_address:
-                logger.info(f"IP获取成功: {url}: {ip_address}")
+                logger.info(f"IP获取成功: {url}:{ip_address}")
                 break
-        # if ip_address == "获取IP失败" or not ip_address:
-        #     logger.error(f"请求网址失败")
 
         # 如果所有 URL 请求失败
         if ip_address == "获取IP失败" or not ip_address:
@@ -435,9 +432,9 @@ class Dydebug(_PluginBase):
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)
-                if self.check_login_status(page, task='refresh_cookie'):
-                    pass
-                else:
+                if not self.check_login_status(page, task='refresh_cookie'):
+                #     pass
+                # else:
                     logger.info("cookie已失效，下次IP变动推送二维码")
                 browser.close()
         except Exception as e:
