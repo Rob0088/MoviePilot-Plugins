@@ -7,6 +7,9 @@
     "icon": "Wecom_A.png",
     "author": "RamenRa",
     "level": 2
+    "history": {
+        "v1.2.0": "去除手动输入cookie输入框，不使用内建CookieCloud尝试使用设定里的CookieCloud"
+        }
     }
 }
 
