@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.0.7"
+    plugin_version = "0.0.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -53,15 +53,15 @@ class Dydebug(_PluginBase):
     _cc_server = None
     _push_qr_now = False
 
-    #匹配ip地址的正则
+    # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
     # 获取ip地址的网址列表
     _ip_urls = ["https://myip.ipip.net", "https://ddns.oray.com/checkip", "https://ip.3322.net", "https://4.ipw.cn"]
     # 当前ip地址
     _current_ip_address = '0.0.0.0'
-    #企业微信登录
+    # 企业微信登录
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
-    #检测间隔时间,默认10分钟
+    # 检测间隔时间,默认10分钟
     _refresh_cron = '*/20 * * * *'
     # _urls = []
     _input_id_list = ''
@@ -267,7 +267,17 @@ class Dydebug(_PluginBase):
                 logger.warning("未找到二维码")
                 return False
         except Exception as e:
+            logger.debug(str(e))
             return False
+
+    def send_pushplus_message(self, title, content):
+        pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
+        pushplus_data = {
+            "title": title,
+            "content": content,
+            "template": "html"
+        }
+        response = requests.post(pushplus_url, json=pushplus_data)
 
     def remote_push_qr(self):
         try:
@@ -287,6 +297,13 @@ class Dydebug(_PluginBase):
                     if self._pushplus_token and self._helloimg_s_token:
                         img_src, refuse_time = self.upload_image(self._qr_code_image)
                         self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
+                        # if img_src:
+                        #     self.post_message(
+                        #         mtype=NotificationType.Plugin,
+                        #         title="企业微信登录二维码",
+                        #         text=refuse_time,
+                        #         image=img_src
+                        #     )
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
@@ -294,12 +311,13 @@ class Dydebug(_PluginBase):
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
+                    else:
+                        logger.warning("远程推送任务 未配置pushplus_token 或 helloimg_s_token")
                 else:
                     logger.warning("远程推送任务 未找到二维码")
             browser.close()
         except Exception as e:
             logger.error(f"远程推送任务 推送二维码失败: {e}")
-
 
     def ChangeIP(self):
         logger.info("开始请求企业微信管理更改可信IP")
@@ -320,6 +338,13 @@ class Dydebug(_PluginBase):
                     if self._pushplus_token and self._helloimg_s_token:
                         img_src, refuse_time = self.upload_image(self._qr_code_image)
                         self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
+                        # if img_src:
+                        #     self.post_message(
+                        #         mtype=NotificationType.Plugin,
+                        #         title="企业微信登录二维码",
+                        #         text=refuse_time,
+                        #         image=img_src
+                        #     )
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)  # 等待用户扫码
@@ -327,11 +352,10 @@ class Dydebug(_PluginBase):
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
-
                         else:
                             self._ip_changed = False
                     else:
-                        logger.info("cookie失效，请使用CookieCloud重新上传。")
+                        logger.info("cookie失效，请重新上传或者配置pushplus_token和helloimg_s_token。")
                 else:  # 如果直接进入企业微信
                     logger.info("尝试cookie登录")
                     # ----------cookie addd-----------------
@@ -399,8 +423,7 @@ class Dydebug(_PluginBase):
                     if cookie_header == '':
                         cookie_header = self._cookie_header
             else:  # 不使用CookieCloud
-                cookie_header = self._cookie_header
-                # return
+                return
             cookie = self.parse_cookie_header(cookie_header)
             self._cookie_from_CC = cookie
             return cookie
@@ -409,7 +432,8 @@ class Dydebug(_PluginBase):
             # logger.info("尝试推送登录二维码")
             return
 
-    def parse_cookie_header(self, cookie_header):
+    @staticmethod
+    def parse_cookie_header(cookie_header):
         cookies = []
         for cookie in cookie_header.split(';'):
             name, value = cookie.strip().split('=', 1)
@@ -433,8 +457,6 @@ class Dydebug(_PluginBase):
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
-                #     pass
-                # else:
                     logger.info("cookie已失效，下次IP变动推送二维码")
                 browser.close()
         except Exception as e:
@@ -455,7 +477,7 @@ class Dydebug(_PluginBase):
                     logger.info("登录成功！")
                 return True
         except Exception as e:
-            # logger.error(f"检查登录状态时发生错误: {e}")
+            logger.debug(str(e))
             pass
 
         try:
@@ -480,8 +502,9 @@ class Dydebug(_PluginBase):
                     logger.error("未收到短信验证码")
                     return False
         except Exception as e:
+            logger.debug(str(e))
             # try:  # 没有登录成功，也没有短信验证码。 查找二维码是否还存在
-            if self.find_qrc(page):
+            if self.find_qrc(page) and not task != 'refresh_cookie':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
                 logger.error(f"用户没有扫描二维码")
                 return False
 
@@ -491,15 +514,14 @@ class Dydebug(_PluginBase):
         buttons = [
             # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
             # ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
-            (
-            "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
-            "配置")
+            ("//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
+             "配置")
         ]
         if self._input_id_list:
             id_list = self._input_id_list.split(",")
             app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
             for app_url in app_urls:
-                page.goto(app_url)    # 打开应用详情页
+                page.goto(app_url)  # 打开应用详情页
                 # logger.info(f"已打开{app_url}")
                 time.sleep(2)
                 # 依次点击每个按钮
@@ -527,20 +549,6 @@ class Dydebug(_PluginBase):
         else:
             logger.error("未找到应用id，修改IP失败")
             return
-
-    def send_pushplus_message(self, title, content):
-        pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
-        pushplus_data = {
-            "title": title,
-            "content": content,
-            "template": "html"
-        }
-        # if wait_time > 2:
-        #     # time.sleep(wait_time)
-        #     logger.info(f"pushplus API 调用次数限制，本次不发送 至少间隔 {wait_time} 秒")
-        # else:
-        response = requests.post(pushplus_url, json=pushplus_data)
-        # return response
 
     def upload_image(self, file_obj, permission=1, strategy_id=1, album_id=1):
         """
@@ -585,6 +593,7 @@ class Dydebug(_PluginBase):
         response = requests.post(helloimg_url, headers=headers, files=files, data=helloimg_data)
 
         # 检查响应内容是否符合预期
+        response_data = None
         try:
             response_data = response.json()
             if not response_data['status']:
@@ -834,7 +843,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '强制更新和立即检测按钮是一次性按钮,使用设定中的CookieCloud设置，关闭了cookie手动输入框'
+                                            'text': '内建CC 或 自定义或 填写两个token三选一否则无法正常使用'
                                         }
                                     }
                                 ]
@@ -854,7 +863,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '优先使用cookie，当IP变动 且 cookie失效 且 填写了两个token才会调用API推送登录二维码。',
+                                            'text': '优先使用cookie，当IP变动 且 cookie失效 且 填写两个token才会调用API推送登录二维码。',
                                         }
                                     }
                                 ]
@@ -891,7 +900,6 @@ class Dydebug(_PluginBase):
         logger.info("远程命令开始推送二维码")
         self.remote_push_qr()
 
-
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
         return [
@@ -908,8 +916,6 @@ class Dydebug(_PluginBase):
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
-
-
 
     @eventmanager.register(EventType.UserMessage)
     def talk(self, event: Event):
@@ -956,14 +962,10 @@ class Dydebug(_PluginBase):
             if self._scheduler:
                 self._scheduler.remove_all_jobs()
                 if self._scheduler.running:
-                    self._event.set()
                     self._scheduler.shutdown()
-                    self._event.clear()
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
 
 
 
