@@ -843,7 +843,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '内建CC 或 自定义或 填写两个token三选一否则无法正常使用'
+                                            'text': '使用内建CookieCloud 或 自定义 或 填写两个token 至少三选一,否则无法正常使用'
                                         }
                                     }
                                 ]
