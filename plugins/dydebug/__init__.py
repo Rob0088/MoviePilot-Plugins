@@ -898,29 +898,27 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "push_qrcode":
                 return
         try:
-            if self._use_cookiecloud and self._cc_server:
-                with sync_playwright() as p:
-                    # 启动 Chromium 浏览器并设置语言为中文
-                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                    context = browser.new_context()
-                    page = context.new_page()
-                    page.goto(self._wechatUrl)
-                    time.sleep(3)
-                    if self.find_qrc(page):
-                        if self._pushplus_token and self._helloimg_s_token:
-                            img_src, refuse_time = self.upload_image(self._qr_code_image)
-                            self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
-                            logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
-                            logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                            time.sleep(90)
-                            login_status = self.check_login_status(page)
-                            if login_status:
+            with sync_playwright() as p:
+                # 启动 Chromium 浏览器并设置语言为中文
+                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                context = browser.new_context()
+                page = context.new_page()
+                page.goto(self._wechatUrl)
+                time.sleep(3)
+                if self.find_qrc(page):
+                    if self._pushplus_token and self._helloimg_s_token:
+                        img_src, refuse_time = self.upload_image(self._qr_code_image)
+                        self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
+                        logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
+                        logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                        time.sleep(90)
+                        login_status = self.check_login_status(page)
+                        if login_status:
+                            if self._use_cookiecloud and self._cc_server:
                                 self._update_cookie(page, context)  # 刷新cookie
-                                self.click_app_management_buttons(page)
-                    else:
-                        logger.warning("远程推送任务 未找到二维码")
-            else:
-                logger.warning("远程推送任务 未找到二维码")
+                            self.click_app_management_buttons(page)
+                else:
+                    logger.warning("远程推送任务 未找到二维码")
         except Exception as e:
             logger.error(f"远程推送任务 推送二维码失败: {e}")
 
