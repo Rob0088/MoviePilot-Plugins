@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.3"
+    plugin_version = "0.1.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -150,9 +150,11 @@ class Dydebug(_PluginBase):
                 self._onlyonce = False
 
             if self._local_scan:
+                logger.info("添加本地扫码任务")
                 self._scheduler.add_job(func=self.local_scanning, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                         name="本地扫码登陆")  # 添加任务
+                logger.info("添加本地扫码任务成功")
                 self._local_scan = False
 
             # 固定半小时周期请求一次地址,防止cookie失效
