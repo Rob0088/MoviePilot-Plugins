@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.4"
+    plugin_version = "0.1.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -735,7 +735,7 @@ class Dydebug(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'use_local_qr',
+                                            'model': 'local_scan',
                                             'label': '本地扫码',
                                         }
                                     }
