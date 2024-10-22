@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.6"
+    plugin_version = "0.1.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -891,38 +891,6 @@ class Dydebug(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        # 获取当前时间
-        current_time = datetime.now().timestamp()
-
-        # 判断二维码是否过期
-        if current_time > self._future_timestamp:
-            # 二维码过期，使用红色字体显示
-            qr_status = {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "color": "red",
-                        "textAlign": "center",
-                        "marginTop": "10px"
-                    },
-                    "text": "二维码已过期"
-                }
-            }
-        else:
-            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            qr_status = {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "color": "green",
-                        "textAlign": "center",
-                        "marginTop": "10px"
-                    },
-                    "text": f"二维码有效，过期时间: {expiration_time}"
-                }
-            }
-
-        # 将二维码图片转换为 base64
         qr_image_data = self._qr_code_image.getvalue()
         base64_image = base64.b64encode(qr_image_data).decode('utf-8')
         img_src = f"data:image/png;base64,{base64_image}"
@@ -942,8 +910,8 @@ class Dydebug(_PluginBase):
                         "margin": "0 auto"
                     }
                 }
-            },
-            qr_status
+            }
+            # qr_status
         ]
 
         return base_content
