@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.9"
+    plugin_version = "0.2.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -890,71 +890,88 @@ class Dydebug(_PluginBase):
             "input_id_list": "",
         }
 
-    def get_page(self) -> List[dict]:
-        # 获取当前时间戳
-        current_time = datetime.now().timestamp()
+def get_page(self) -> List[dict]:
+    # 获取当前时间戳
+    current_time = datetime.now().timestamp()
 
-        # 判断二维码是否过期
-        if current_time > self._future_timestamp:
-            vaild_text = "二维码已过期"
-            color = "#ff0000"
-        else:
-            # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
-            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            vaild_text = f"二维码有效，过期时间: {expiration_time}"
-            color = "#32CD32"
+    # 判断二维码是否过期
+    if current_time > self._future_timestamp:
+        vaild_text = "二维码已过期"
+        color = "#ff0000"
+    else:
+        # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
+        expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        vaild_text = f"二维码有效，过期时间: {expiration_time}"
+        color = "#32CD32"
 
-        # 获取二维码图片并转为 base64
-        qr_image_data = self._qr_code_image.getvalue()
-        base64_image = base64.b64encode(qr_image_data).decode('utf-8')
-        img_src = f"data:image/png;base64,{base64_image}"
+    # 获取二维码图片并转为 base64
+    qr_image_data = self._qr_code_image.getvalue()
+    base64_image = base64.b64encode(qr_image_data).decode('utf-8')
+    img_src = f"data:image/png;base64,{base64_image}"
 
-        # 页面内容，显示二维码状态信息和二维码图片
-        base_content = [
-            {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "textAlign": "center"
-                    }
-                },
-                "content": [
-                    {
-                        "component": "div",
-                        "text": vaild_text,
-                        "props": {
-                            "style": {
-                                "fontSize": "22px",
-                                "fontWeight": "bold",
-                                "color": "#ffffff",
-                                "backgroundColor": color,
-                                "padding": "8px",
-                                "borderRadius": "5px",
-                                "display": "inline-block",
-                                "textAlign": "center",
-                                "marginBottom": "40px"
-                            }
+    # 页面内容，显示二维码状态信息、二维码图片和说明文本
+    base_content = [
+        {
+            "component": "div",
+            "props": {
+                "style": {
+                    "textAlign": "center"
+                }
+            },
+            "content": [
+                {
+                    "component": "div",
+                    "text": vaild_text,
+                    "props": {
+                        "style": {
+                            "fontSize": "22px",
+                            "fontWeight": "bold",
+                            "color": "#ffffff",
+                            "backgroundColor": color,
+                            "padding": "8px",
+                            "borderRadius": "5px",
+                            "display": "inline-block",
+                            "textAlign": "center",
+                            "marginBottom": "40px"
                         }
                     }
-                ]
-            },
-            {
-                "component": "img",
-                "props": {
-                    "src": img_src,
-                    "style": {
-                        "width": "auto",
-                        "height": "auto",
-                        "maxWidth": "100%",
-                        "maxHeight": "100%",
-                        "display": "block",
-                        "margin": "0 auto"
-                    }
+                }
+            ]
+        },
+        {
+            "component": "img",
+            "props": {
+                "src": img_src,
+                "style": {
+                    "width": "auto",
+                    "height": "auto",
+                    "maxWidth": "100%",
+                    "maxHeight": "100%",
+                    "display": "block",
+                    "margin": "0 auto"
                 }
             }
-        ]
+        },
+        # 固定底部的说明文本
+        {
+            "component": "div",
+            "text": "当前界面用于显示本地登录二维码，点击右下角齿轮开启‘本地扫码登录’和参数配置。",
+            "props": {
+                "style": {
+                    "position": "fixed",
+                    "bottom": "10px",  
+                    "left": "50%",     
+                    "transform": "translateX(-50%)",  
+                    "fontSize": "16px",
+                    "color": "#808080",
+                    "textAlign": "center"
+                }
+            }
+        }
+    ]
 
-        return base_content
+    return base_content
+
 
     @eventmanager.register(EventType.PluginAction)
     def push_qr_code(self, event: Event = None):
