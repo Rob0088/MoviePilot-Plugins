@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.5"
+    plugin_version = "0.1.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -65,14 +65,19 @@ class Dydebug(_PluginBase):
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
     # 检测间隔时间,默认10分钟
     _refresh_cron = '*/20 * * * *'
-    # _urls = []
+    # 输入的企业应用id
     _input_id_list = ''
+    # helloimg的token
     _helloimg_s_token = ""
+    # pushplus的token
     _pushplus_token = ""
+    # 二维码
     _qr_code_image = None
     text = ""
+    # 手机验证码
     _verification_code = ''
-    # _app_ids = []
+    # 过期时间
+    _future_timestamp = 0
 
     # -------cookie add------------
     # cookie有效检测
@@ -150,11 +155,9 @@ class Dydebug(_PluginBase):
                 self._onlyonce = False
 
             if self._local_scan:
-                logger.info("添加本地扫码任务")
                 self._scheduler.add_job(func=self.local_scanning, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                         name="本地扫码登陆")  # 添加任务
-                logger.info("添加本地扫码任务成功")
                 self._local_scan = False
 
             # 固定半小时周期请求一次地址,防止cookie失效
@@ -183,8 +186,6 @@ class Dydebug(_PluginBase):
         if not self._enabled:
             logger.error("插件未开启")
             return
-        logger.info("本地扫码任务: 开始")
-        logger.info(f"开关: {self._local_scan}")
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
@@ -192,15 +193,20 @@ class Dydebug(_PluginBase):
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)
+                # 获取当前时间加110秒后的时间戳
+                current_time = datetime.now()
+                future_time = current_time + timedelta(seconds=110)
+                self._future_timestamp = int(future_time.timestamp())
                 if self.find_qrc(page):
-                    logger.info("本地扫码任务: 请重新进入插件面板扫码，等待用户20秒扫码")
-                    logger.info("本地扫码任务: 二维码有效时间100秒")
+                    logger.info("本地扫码任务: 请重新进入插件面板扫码，程序等待用户20秒扫码")
                     time.sleep(20)
                     if self.check_login_status(page, task='local_scanning'):
                         self._update_cookie(page, context)  # 刷新cookie
+                else:
+                    logger.info("本地扫码任务: 任务结束")
                 browser.close()
         except Exception as e:
-            logger.error(f"本地扫码失败:{e}")
+            logger.error(f"本地扫码任务: 本地扫码失败:{e}")
 
 
 
@@ -884,14 +890,45 @@ class Dydebug(_PluginBase):
             "input_id_list": "",
         }
 
-
     def get_page(self) -> List[dict]:
+        # 获取当前时间
+        current_time = datetime.now().timestamp()
+
+        # 判断二维码是否过期
+        if current_time > self._future_timestamp:
+            # 二维码过期，使用红色字体显示
+            qr_status = {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "color": "red",
+                        "textAlign": "center",
+                        "marginTop": "10px"
+                    },
+                    "text": "二维码已过期"
+                }
+            }
+        else:
+            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            qr_status = {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "color": "green",
+                        "textAlign": "center",
+                        "marginTop": "10px"
+                    },
+                    "text": f"二维码有效，过期时间: {expiration_time}"
+                }
+            }
+
         # 将二维码图片转换为 base64
         qr_image_data = self._qr_code_image.getvalue()
         base64_image = base64.b64encode(qr_image_data).decode('utf-8')
         img_src = f"data:image/png;base64,{base64_image}"
 
-        base_content = [
+        # 添加图片和状态信息到页面内容
+        base_content[1:1] = [
             {
                 "component": "img",
                 "props": {
@@ -905,8 +942,10 @@ class Dydebug(_PluginBase):
                         "margin": "0 auto"
                     }
                 }
-            }
+            },
+            qr_status
         ]
+
         return base_content
 
     @eventmanager.register(EventType.PluginAction)
