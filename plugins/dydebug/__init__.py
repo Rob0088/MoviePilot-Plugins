@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.2.0"
+    plugin_version = "0.2.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -186,29 +186,38 @@ class Dydebug(_PluginBase):
         if not self._enabled:
             logger.error("插件未开启")
             return
+
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
                 context = browser.new_context()
                 page = context.new_page()
                 page.goto(self._wechatUrl)
-                time.sleep(3)
-                # 获取当前时间加110秒后的时间戳
+                time.sleep(3)  # 页面加载等待时间
+
                 current_time = datetime.now()
                 future_time = current_time + timedelta(seconds=110)
                 self._future_timestamp = int(future_time.timestamp())
+
                 if self.find_qrc(page):
-                    logger.info("本地扫码任务: 请重新进入插件面板扫码，程序等待用户20秒扫码")
-                    time.sleep(20)
-                    if self.check_login_status(page, task='local_scanning'):
-                        self._update_cookie(page, context)  # 刷新cookie
+                    logger.info("本地扫码任务: 请<重新进入!>插件面板扫码!，每20秒检查登录状态")
+                    max_attempts = 5
+                    attempt = 0
+                    while attempt < max_attempts:
+                        attempt += 1
+                        logger.info(f"第 {attempt} 次检查登录状态...")
+                        time.sleep(20)  # 每20秒检查一次
+                        if self.check_login_status(page, task='local_scanning'):
+                            logger.info("登录成功，更新cookie")
+                            self._update_cookie(page, context)  # 刷新cookie
+                            break
+                    else:
+                        logger.info("未检测到登录，任务结束")
                 else:
-                    logger.info("本地扫码任务: 任务结束")
+                    logger.info("未找到二维码，任务结束")
                 browser.close()
         except Exception as e:
-            logger.error(f"本地扫码任务: 本地扫码失败:{e}")
-
-
+            logger.error(f"本地扫码任务: 本地扫码失败: {e}")
 
     @eventmanager.register(EventType.PluginAction)
     def check(self, event: Event = None):
@@ -890,88 +899,72 @@ class Dydebug(_PluginBase):
             "input_id_list": "",
         }
 
-def get_page(self) -> List[dict]:
-    # 获取当前时间戳
-    current_time = datetime.now().timestamp()
 
-    # 判断二维码是否过期
-    if current_time > self._future_timestamp:
-        vaild_text = "二维码已过期"
-        color = "#ff0000"
-    else:
-        # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
-        expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        vaild_text = f"二维码有效，过期时间: {expiration_time}"
-        color = "#32CD32"
+    def get_page(self) -> List[dict]:
+        # 获取当前时间戳
+        current_time = datetime.now().timestamp()
 
-    # 获取二维码图片并转为 base64
-    qr_image_data = self._qr_code_image.getvalue()
-    base64_image = base64.b64encode(qr_image_data).decode('utf-8')
-    img_src = f"data:image/png;base64,{base64_image}"
+        # 判断二维码是否过期
+        if current_time > self._future_timestamp:
+            vaild_text = "二维码已过期"
+            color = "#ff0000"
+        else:
+            # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
+            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            vaild_text = f"二维码有效，过期时间: {expiration_time}"
+            color = "#32CD32"
 
-    # 页面内容，显示二维码状态信息、二维码图片和说明文本
-    base_content = [
-        {
-            "component": "div",
-            "props": {
-                "style": {
-                    "textAlign": "center"
-                }
-            },
-            "content": [
-                {
-                    "component": "div",
-                    "text": vaild_text,
-                    "props": {
-                        "style": {
-                            "fontSize": "22px",
-                            "fontWeight": "bold",
-                            "color": "#ffffff",
-                            "backgroundColor": color,
-                            "padding": "8px",
-                            "borderRadius": "5px",
-                            "display": "inline-block",
-                            "textAlign": "center",
-                            "marginBottom": "40px"
+        # 获取二维码图片并转为 base64
+        qr_image_data = self._qr_code_image.getvalue()
+        base64_image = base64.b64encode(qr_image_data).decode('utf-8')
+        img_src = f"data:image/png;base64,{base64_image}"
+
+        # 页面内容，显示二维码状态信息和二维码图片
+        base_content = [
+            {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "textAlign": "center"
+                    }
+                },
+                "content": [
+                    {
+                        "component": "div",
+                        "text": vaild_text,
+                        "props": {
+                            "style": {
+                                "fontSize": "22px",
+                                "fontWeight": "bold",
+                                "color": "#ffffff",
+                                "backgroundColor": color,
+                                "padding": "8px",
+                                "borderRadius": "5px",
+                                "display": "inline-block",
+                                "textAlign": "center",
+                                "marginBottom": "40px"
+                            }
                         }
                     }
-                }
-            ]
-        },
-        {
-            "component": "img",
-            "props": {
-                "src": img_src,
-                "style": {
-                    "width": "auto",
-                    "height": "auto",
-                    "maxWidth": "100%",
-                    "maxHeight": "100%",
-                    "display": "block",
-                    "margin": "0 auto"
-                }
-            }
-        },
-        # 固定底部的说明文本
-        {
-            "component": "div",
-            "text": "当前界面用于显示本地登录二维码，点击右下角齿轮开启‘本地扫码登录’和参数配置。",
-            "props": {
-                "style": {
-                    "position": "fixed",
-                    "bottom": "10px",  
-                    "left": "50%",     
-                    "transform": "translateX(-50%)",  
-                    "fontSize": "16px",
-                    "color": "#808080",
-                    "textAlign": "center"
+                ]
+            },
+            {
+                "component": "img",
+                "props": {
+                    "src": img_src,
+                    "style": {
+                        "width": "auto",
+                        "height": "auto",
+                        "maxWidth": "100%",
+                        "maxHeight": "100%",
+                        "display": "block",
+                        "margin": "0 auto"
+                    }
                 }
             }
-        }
-    ]
+        ]
 
-    return base_content
-
+        return base_content
 
     @eventmanager.register(EventType.PluginAction)
     def push_qr_code(self, event: Event = None):
