@@ -891,12 +891,13 @@ class Dydebug(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
+        # 将二维码图片转换为 base64
         qr_image_data = self._qr_code_image.getvalue()
         base64_image = base64.b64encode(qr_image_data).decode('utf-8')
         img_src = f"data:image/png;base64,{base64_image}"
 
-        # 添加图片和状态信息到页面内容
-        base_content[1:1] = [
+        # 创建简化的内容，仅显示二维码
+        base_content = [
             {
                 "component": "img",
                 "props": {
@@ -911,7 +912,6 @@ class Dydebug(_PluginBase):
                     }
                 }
             }
-            # qr_status
         ]
 
         return base_content
