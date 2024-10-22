@@ -180,6 +180,8 @@ class Dydebug(_PluginBase):
         if not self._enabled and not self._local_scan:
             logger.error("插件未开启")
             return
+        logger.info("本地扫码任务: 开始")
+        logger.info(f"开关: {self._local_scan}")
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
