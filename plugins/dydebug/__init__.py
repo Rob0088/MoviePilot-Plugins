@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.1.8"
+    plugin_version = "0.1.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
