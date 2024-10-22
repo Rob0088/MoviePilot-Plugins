@@ -919,12 +919,44 @@ class Dydebug(_PluginBase):
             vaild_text = f"二维码有效，过期时间: {expiration_time}"
             color = "#32CD32"
 
-        # 获取二维码图片并转为 base64
-        qr_image_data = self._qr_code_image.getvalue()
-        base64_image = base64.b64encode(qr_image_data).decode('utf-8')
-        img_src = f"data:image/png;base64,{base64_image}"
+        # 如果self._qr_code_image为None，返回提示信息
+        if self._qr_code_image is None:
+            img_component = {
+                "component": "div",
+                "text": "<本地扫码刷新cookie>任务未运行",
+                "props": {
+                    "style": {
+                        "fontSize": "22px",
+                        "color": "#ff0000",
+                        "textAlign": "center",
+                        "margin": "20px"
+                    }
+                }
+            }
+        else:
+            # 获取二维码图片数据
+            qr_image_data = self._qr_code_image.getvalue()
+            # 将图片数据转为 base64 编码
+            base64_image = base64.b64encode(qr_image_data).decode('utf-8')
+            img_src = f"data:image/png;base64,{base64_image}"
 
-        # 页面内容，显示二维码状态信息和二维码图片
+            # 生成图片组件
+            img_component = {
+                "component": "img",
+                "props": {
+                    "src": img_src,
+                    "style": {
+                        "width": "auto",
+                        "height": "auto",
+                        "maxWidth": "100%",
+                        "maxHeight": "100%",
+                        "display": "block",
+                        "margin": "0 auto"
+                    }
+                }
+            }
+
+        # 页面内容，显示二维码状态信息和二维码图片或提示信息
         base_content = [
             {
                 "component": "div",
@@ -953,20 +985,7 @@ class Dydebug(_PluginBase):
                     }
                 ]
             },
-            {
-                "component": "img",
-                "props": {
-                    "src": img_src,
-                    "style": {
-                        "width": "auto",
-                        "height": "auto",
-                        "maxWidth": "100%",
-                        "maxHeight": "100%",
-                        "display": "block",
-                        "margin": "0 auto"
-                    }
-                }
-            }
+            img_component  # 添加二维码图片或提示信息
         ]
 
         return base_content
