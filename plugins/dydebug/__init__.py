@@ -43,6 +43,7 @@ class Dydebug(_PluginBase):
     auth_level = 2
 
     # ------------------------------------------私有属性------------------------------------------
+
     _enabled = False  # 开关
     _cron = None
     _onlyonce = False
@@ -186,6 +187,10 @@ class Dydebug(_PluginBase):
         if not self._enabled:
             logger.error("插件未开启")
             return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "dynamicwechat":
+                return
 
         try:
             with sync_playwright() as p:
@@ -200,12 +205,12 @@ class Dydebug(_PluginBase):
                 self._future_timestamp = int(future_time.timestamp())
 
                 if self.find_qrc(page):
-                    logger.info("本地扫码任务: 请<重新进入!>插件面板扫码!，每20秒检查登录状态")
+                    logger.info("请<重新进入!>插件面板扫码!，每20秒检查登录状态，最大尝试5次")
                     max_attempts = 5
                     attempt = 0
                     while attempt < max_attempts:
                         attempt += 1
-                        logger.info(f"第 {attempt} 次检查登录状态...")
+                        # logger.info(f"第 {attempt} 次检查登录状态...")
                         time.sleep(20)  # 每20秒检查一次
                         if self.check_login_status(page, task='local_scanning'):
                             logger.info("登录成功，更新cookie")
@@ -228,10 +233,10 @@ class Dydebug(_PluginBase):
             logger.error("插件未开启")
             return
 
-        # if event:
-        #     event_data = event.event_data
-        #     if not event_data or event_data.get("action") != "dynamicwechat":
-        #         return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "dynamicwechat":
+                return
         #     logger.info("收到命令，开始检测公网IP ...")
         #     self.post_message(channel=event.event_data.get("channel"),
         #                       title="开始检测公网IP ...",
@@ -751,7 +756,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'local_scan',
-                                            'label': '本地扫码',
+                                            'label': '本地扫码刷新Cookie',
                                         }
                                     }
                                 ]
@@ -1012,7 +1017,7 @@ class Dydebug(_PluginBase):
             {
                 "cmd": "/push_qr",
                 "event": EventType.PluginAction,
-                "desc": "立即推送登录二维码到微信",
+                "desc": "立即推送登录二维码到pushplus",
                 "category": "",
                 "data": {
                     "action": "push_qrcode"
