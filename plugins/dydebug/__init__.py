@@ -891,13 +891,53 @@ class Dydebug(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        # 将二维码图片转换为 base64
+        # 获取当前时间戳
+        current_time = datetime.now().timestamp()
+
+        # 判断二维码是否过期
+        if current_time > self._future_timestamp:
+            vaild_text = "二维码已过期"
+            color = "#ff0000"
+        else:
+            # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
+            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            vaild_text = f"二维码有效，过期时间: {expiration_time}"
+            color = "#32CD32"
+
+        # 获取二维码图片并转为 base64
         qr_image_data = self._qr_code_image.getvalue()
         base64_image = base64.b64encode(qr_image_data).decode('utf-8')
         img_src = f"data:image/png;base64,{base64_image}"
 
-        # 创建简化的内容，仅显示二维码
+        # 页面内容，显示二维码状态信息和二维码图片
         base_content = [
+            {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "textAlign": "center"
+                    }
+                },
+                "content": [
+                    {
+                        "component": "div",
+                        "text": vaild_text,
+                        "props": {
+                            "style": {
+                                "fontSize": "22px",
+                                "fontWeight": "bold",
+                                "color": "#ffffff",
+                                "backgroundColor": color,
+                                "padding": "8px",
+                                "borderRadius": "5px",
+                                "display": "inline-block",
+                                "textAlign": "center",
+                                "marginBottom": "40px"
+                            }
+                        }
+                    }
+                ]
+            },
             {
                 "component": "img",
                 "props": {
