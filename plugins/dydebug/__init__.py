@@ -2,6 +2,7 @@ import io
 import random
 import re
 import time
+import base64
 from datetime import datetime, timedelta
 from typing import Optional
 from typing import Tuple, List, Dict, Any
@@ -177,7 +178,7 @@ class Dydebug(_PluginBase):
         """
         本地扫码
         """
-        if not self._enabled and not self._local_scan:
+        if not self._enabled:
             logger.error("插件未开启")
             return
         logger.info("本地扫码任务: 开始")
