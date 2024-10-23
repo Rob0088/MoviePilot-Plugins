@@ -911,7 +911,7 @@ class Dydebug(_PluginBase):
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "运行获得的所有登录二维码都会在此展示",
+                "text": "运行过程所有的登录二维码都会在此展示",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -945,36 +945,47 @@ class Dydebug(_PluginBase):
             }
 
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
-        base_content = [
-            {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "textAlign": "center"
-                    }
-                },
-                "content": [
-                    {
-                        "component": "div",
-                        "text": vaild_text,
-                        "props": {
-                            "style": {
-                                "fontSize": "22px",
-                                "fontWeight": "bold",
-                                "color": "#ffffff",
-                                "backgroundColor": color,
-                                "padding": "8px",
-                                "borderRadius": "5px",
-                                "display": "inline-block",
-                                "textAlign": "center",
-                                "marginBottom": "40px"
-                            }
+    base_content = [
+        {
+            "component": "div",
+            "props": {
+                "style": {
+                    "textAlign": "center"
+                }
+            },
+            "content": [
+                {
+                    "component": "div",
+                    "text": vaild_text,
+                    "props": {
+                        "style": {
+                            "fontSize": "22px",
+                            "fontWeight": "bold",
+                            "color": "#ffffff",
+                            "backgroundColor": color,
+                            "padding": "8px",
+                            "borderRadius": "5px",
+                            "display": "inline-block",
+                            "textAlign": "center",
+                            "marginBottom": "40px"
                         }
                     }
-                ]
-            },
-            img_component  # 二维码图片
-        ]
+                },
+                img_component, 
+                {
+                    "component": "div", 
+                    "text": "运行过程所有的登录二维码都会在此展示",
+                    "props": {
+                        "style": {
+                            "fontSize": "16px",
+                            "color": "#ffffff",
+                            "marginTop": "20px"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
 
         return base_content
 
