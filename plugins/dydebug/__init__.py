@@ -96,8 +96,8 @@ class Dydebug(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
-        self._server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
         # 清空配置
+        self._server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
         self._helloimg_s_token = ''
         self._pushplus_token = ''
         self._ip_changed = True
@@ -122,7 +122,7 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        # self.try_connect_cc()
+        self.try_connect_cc()
 
         # 停止现有任务
         self.stop_service()
@@ -157,9 +157,9 @@ class Dydebug(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
-                # if self._forced_update:
-                #     time.sleep(4)
-                #     self._forced_update = False
+                if self._forced_update:
+                    time.sleep(4)
+                    self._forced_update = False
         self.__update_config()
 
     @eventmanager.register(EventType.PluginAction)
@@ -296,8 +296,10 @@ class Dydebug(_PluginBase):
             else:
                 return "获取IP失败"
         except Exception as e:
-            logger.warning(f"{url} 获取IP失败,Error: {e}")
-            # return "获取IP失败"
+            if "104" in str(e):
+                pass
+            else:
+                logger.warning(f"{url} 获取IP失败,Error: {e}")
 
     def find_qrc(self, page):
         # 查找 iframe 元素并切换到它
@@ -426,7 +428,7 @@ class Dydebug(_PluginBase):
                 logger.error(f"更新cookie发生错误: {e}")
         else:
             logger.error("CookieCloud配置错误, 不刷新cookie")
-        
+
 
     # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
@@ -659,7 +661,6 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            # "standalone_chrome_address": self._diy_server,
             "cookie_from_CC": self._cookie_from_CC,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
@@ -710,6 +711,22 @@ class Dydebug(_PluginBase):
                                         }
                                     }
                                 ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'forced_update',
+                                            'label': '强制更新IP',
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
@@ -744,7 +761,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'local_scan',
-                                            'label': '本地扫码刷新Cookie并改IP',
+                                            'label': '扫码刷新Cookie和改IP',
                                         }
                                     }
                                 ]
@@ -883,7 +900,7 @@ class Dydebug(_PluginBase):
             "enabled": False,
             "cron": "",
             "onlyonce": False,
-            # "forceUpdate": False,
+            "forceUpdate": False,
             "use_cookiecloud": True,
             "use_local_qr": False,  # 默认关闭本地扫码
             "cookie_header": "",
@@ -945,47 +962,36 @@ class Dydebug(_PluginBase):
             }
 
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
-    base_content = [
-        {
-            "component": "div",
-            "props": {
-                "style": {
-                    "textAlign": "center"
-                }
-            },
-            "content": [
-                {
-                    "component": "div",
-                    "text": vaild_text,
-                    "props": {
-                        "style": {
-                            "fontSize": "22px",
-                            "fontWeight": "bold",
-                            "color": "#ffffff",
-                            "backgroundColor": color,
-                            "padding": "8px",
-                            "borderRadius": "5px",
-                            "display": "inline-block",
-                            "textAlign": "center",
-                            "marginBottom": "40px"
-                        }
+        base_content = [
+            {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "textAlign": "center"
                     }
                 },
-                img_component, 
-                {
-                    "component": "div", 
-                    "text": "运行过程所有的登录二维码都会在此展示",
-                    "props": {
-                        "style": {
-                            "fontSize": "16px",
-                            "color": "#ffffff",
-                            "marginTop": "20px"
+                "content": [
+                    {
+                        "component": "div",
+                        "text": vaild_text,
+                        "props": {
+                            "style": {
+                                "fontSize": "22px",
+                                "fontWeight": "bold",
+                                "color": "#ffffff",
+                                "backgroundColor": color,
+                                "padding": "8px",
+                                "borderRadius": "5px",
+                                "display": "inline-block",
+                                "textAlign": "center",
+                                "marginBottom": "40px"
+                            }
                         }
                     }
-                }
-            ]
-        }
-    ]
+                ]
+            },
+            img_component  # 二维码图片
+        ]
 
         return base_content
 
@@ -1029,18 +1035,17 @@ class Dydebug(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
-        # return [
-        #     {
-        #         "cmd": "/push_qr",
-        #         "event": EventType.PluginAction,
-        #         "desc": "立即推送登录二维码到pushplus",
-        #         "category": "",
-        #         "data": {
-        #             "action": "push_qrcode"
-        #         }
-        #     }
-        # ]
+        return [
+            {
+                "cmd": "/push_qr",
+                "event": EventType.PluginAction,
+                "desc": "立即推送登录二维码到pushplus",
+                "category": "",
+                "data": {
+                    "action": "push_qrcode"
+                }
+            }
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
