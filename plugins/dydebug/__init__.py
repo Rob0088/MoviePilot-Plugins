@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.2.4"
+    plugin_version = "0.3.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -98,21 +98,16 @@ class Dydebug(_PluginBase):
     def init_plugin(self, config: dict = None):
         self._server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
         # 清空配置
-        # self._wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
-        # self._urls = []
         self._helloimg_s_token = ''
         self._pushplus_token = ''
         self._ip_changed = True
         self._forced_update = False
-        # self._cookie_valid = False
         self._use_cookiecloud = True
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
         self._cookie_from_CC = ""
         self._current_ip_address = self.get_ip_from_url(self._ip_urls[0])
-        # logger.info(f"当前公网 IP: {self._current_ip_address}")
-        # logger.info(f"server host: {self._server} _uuid: {settings.COOKIECLOUD_KEY} _password: {settings.COOKIECLOUD_PASSWORD}")
         if config:
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
@@ -127,18 +122,7 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        if self._use_cookiecloud:
-            if settings.COOKIECLOUD_ENABLE_LOCAL:
-                self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
-                                                password=settings.COOKIECLOUD_PASSWORD)
-                logger.info("使用内建CookieCloud服务器")
-            else:  # 使用设置里的cookieCloud
-                self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
-                                                password=settings.COOKIECLOUD_PASSWORD)
-                logger.info("使用自定义CookieCloud服务器")
-            if not self._cc_server.check_connection():
-                self._cc_server = None
-                logger.error("没有可用的CookieCloud服务器")
+        # self.try_connect_cc()
 
         # 停止现有任务
         self.stop_service()
@@ -173,9 +157,9 @@ class Dydebug(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
-                if self._forced_update:
-                    time.sleep(4)
-                    self._forced_update = False
+                # if self._forced_update:
+                #     time.sleep(4)
+                #     self._forced_update = False
         self.__update_config()
 
     @eventmanager.register(EventType.PluginAction)
@@ -183,8 +167,8 @@ class Dydebug(_PluginBase):
         """
         本地扫码
         """
-        if not self._enabled or not self._cc_server:
-            logger.error("插件未开启或CookieCloud服务器连接失败")
+        if not self._enabled:
+            logger.error("插件未开启")
             return
         if event:
             event_data = event.event_data
@@ -210,6 +194,7 @@ class Dydebug(_PluginBase):
                         if self.check_login_status(page, task='local_scanning'):
                             logger.info("登录成功，更新cookie")
                             self._update_cookie(page, context)  # 刷新cookie
+                            self.click_app_management_buttons(page)
                             break
                     else:
                         logger.info("未检测到登录，任务结束")
@@ -281,6 +266,20 @@ class Dydebug(_PluginBase):
             return True
         else:
             return False
+
+    def try_connect_cc(self):
+        if self._use_cookiecloud:
+            if settings.COOKIECLOUD_ENABLE_LOCAL:
+                self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
+                                                password=settings.COOKIECLOUD_PASSWORD)
+                logger.info("使用内建CookieCloud服务器")
+            else:  # 使用设置里的cookieCloud
+                self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
+                                                password=settings.COOKIECLOUD_PASSWORD)
+                logger.info("使用自定义CookieCloud服务器")
+            if not self._cc_server.check_connection():
+                self._cc_server = None
+                logger.error("没有可用的CookieCloud服务器")
 
     def get_ip_from_url(self, url):
         try:
@@ -394,6 +393,12 @@ class Dydebug(_PluginBase):
             pass
 
     def _update_cookie(self, page, context):
+        self._future_timestamp = 0  # 标记二维码失效
+        if self._cc_server is None:
+            self.try_connect_cc()  # 再尝试一次连接
+            if self._cc_server is None:
+                return
+
         if self._use_cookiecloud and self._cc_server:
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
@@ -421,6 +426,7 @@ class Dydebug(_PluginBase):
                 logger.error(f"更新cookie发生错误: {e}")
         else:
             logger.error("CookieCloud配置错误, 不刷新cookie")
+        
 
     # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
@@ -704,22 +710,6 @@ class Dydebug(_PluginBase):
                                         }
                                     }
                                 ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'forced_update',
-                                            'label': '强制更新IP',
-                                        }
-                                    }
-                                ]
                             }
                         ]
                     },
@@ -754,7 +744,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'local_scan',
-                                            'label': '本地扫码刷新Cookie',
+                                            'label': '本地扫码刷新Cookie并改IP',
                                         }
                                     }
                                 ]
@@ -893,7 +883,7 @@ class Dydebug(_PluginBase):
             "enabled": False,
             "cron": "",
             "onlyonce": False,
-            "forceUpdate": False,
+            # "forceUpdate": False,
             "use_cookiecloud": True,
             "use_local_qr": False,  # 默认关闭本地扫码
             "cookie_header": "",
@@ -955,50 +945,36 @@ class Dydebug(_PluginBase):
             }
 
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
-    base_content = [
-        {
-            "component": "div",
-            "props": {
-                "style": {
-                    "textAlign": "center"
-                }
-            },
-            "content": [
-                {
-                    "component": "div",
-                    "text": vaild_text,
-                    "props": {
-                        "style": {
-                            "fontSize": "22px",
-                            "fontWeight": "bold",
-                            "color": "#ffffff",
-                            "backgroundColor": color,
-                            "padding": "8px",
-                            "borderRadius": "5px",
-                            "display": "inline-block",
-                            "textAlign": "center",
-                            "marginBottom": "40px"
-                        }
+        base_content = [
+            {
+                "component": "div",
+                "props": {
+                    "style": {
+                        "textAlign": "center"
                     }
                 },
-                img_component,  # 二维码图片
-                {
-                    "component": "div",  
-                    "text": "所有的登录二维码都会在这里展示",
-                    "props": {
-                        "style": {
-                            "fontSize": "16px",
-                            "backgroundColor": "#87CEFA", 
-                            "padding": "10px", 
-                            "borderRadius": "5px",  
-                            "color": "#ffffff",
-                            "marginTop": "20px"
+                "content": [
+                    {
+                        "component": "div",
+                        "text": vaild_text,
+                        "props": {
+                            "style": {
+                                "fontSize": "22px",
+                                "fontWeight": "bold",
+                                "color": "#ffffff",
+                                "backgroundColor": color,
+                                "padding": "8px",
+                                "borderRadius": "5px",
+                                "display": "inline-block",
+                                "textAlign": "center",
+                                "marginBottom": "40px"
+                            }
                         }
                     }
-                }
-            ]
-        }
-    ]
+                ]
+            },
+            img_component  # 二维码图片
+        ]
 
         return base_content
 
@@ -1030,10 +1006,8 @@ class Dydebug(_PluginBase):
                         time.sleep(90)
                         login_status = self.check_login_status(page, 'push_qr_code')
                         if login_status:
-                            if self._use_cookiecloud and self._cc_server:
-                                self._update_cookie(page, context)  # 刷新cookie
-                            else:
-                                logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
+                            self._update_cookie(page, context)  # 刷新cookie
+                            logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
                         logger.warning("远程推送任务: 未配置pushplus_token和helloimg_s_token")
