@@ -43,7 +43,6 @@ class Dydebug(_PluginBase):
     auth_level = 2
 
     # ------------------------------------------私有属性------------------------------------------
-
     _enabled = False  # 开关
     _cron = None
     _onlyonce = False
@@ -184,8 +183,8 @@ class Dydebug(_PluginBase):
         """
         本地扫码
         """
-        if not self._enabled:
-            logger.error("插件未开启")
+        if not self._enabled or not self._cc_server:
+            logger.error("插件未开启或CookieCloud服务器连接失败")
             return
         if event:
             event_data = event.event_data
@@ -199,10 +198,6 @@ class Dydebug(_PluginBase):
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)  # 页面加载等待时间
-
-                current_time = datetime.now()
-                future_time = current_time + timedelta(seconds=110)
-                self._future_timestamp = int(future_time.timestamp())
 
                 if self.find_qrc(page):
                     logger.info("请<重新进入!>插件面板扫码!，每20秒检查登录状态，最大尝试5次")
@@ -249,10 +244,10 @@ class Dydebug(_PluginBase):
 
         # logger.info("检测公网IP完毕")
         logger.info("----------------------本次任务结束----------------------")
-        if event:
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="检测公网IP完毕",
-                              userid=event.event_data.get("user"))
+        # if event:
+        #     self.post_message(channel=event.event_data.get("channel"),
+        #                       title="检测公网IP完毕",
+        #                       userid=event.event_data.get("user"))
 
     def CheckIP(self):
         retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
@@ -302,7 +297,7 @@ class Dydebug(_PluginBase):
             else:
                 return "获取IP失败"
         except Exception as e:
-            logger.warning(f"{url}获取IP失败,Error: {e}")
+            logger.warning(f"{url} 获取IP失败,Error: {e}")
             # return "获取IP失败"
 
     def find_qrc(self, page):
@@ -315,6 +310,9 @@ class Dydebug(_PluginBase):
             # 查找二维码图片元素
             qr_code_element = frame.query_selector("img.qrcode_login_img")
             if qr_code_element:
+                current_time = datetime.now()
+                future_time = current_time + timedelta(seconds=110)
+                self._future_timestamp = int(future_time.timestamp())
                 # logger.info("找到二维码图片元素")
                 # 保存二维码图片
                 qr_code_url = qr_code_element.get_attribute('src')
@@ -915,15 +913,15 @@ class Dydebug(_PluginBase):
             color = "#ff0000"
         else:
             # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
-            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            vaild_text = f"二维码有效，过期时间: {expiration_time}"
+            expiration_time = self._future_timestamp - current_time
+            vaild_text = f"二维码有效，剩余时间: {expiration_time} 秒"
             color = "#32CD32"
 
         # 如果self._qr_code_image为None，返回提示信息
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "<本地扫码刷新cookie>任务未运行",
+                "text": "运行获得的所有登录二维码都会在此展示",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -957,36 +955,50 @@ class Dydebug(_PluginBase):
             }
 
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
-        base_content = [
-            {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "textAlign": "center"
-                    }
-                },
-                "content": [
-                    {
-                        "component": "div",
-                        "text": vaild_text,
-                        "props": {
-                            "style": {
-                                "fontSize": "22px",
-                                "fontWeight": "bold",
-                                "color": "#ffffff",
-                                "backgroundColor": color,
-                                "padding": "8px",
-                                "borderRadius": "5px",
-                                "display": "inline-block",
-                                "textAlign": "center",
-                                "marginBottom": "40px"
-                            }
+    base_content = [
+        {
+            "component": "div",
+            "props": {
+                "style": {
+                    "textAlign": "center"
+                }
+            },
+            "content": [
+                {
+                    "component": "div",
+                    "text": vaild_text,
+                    "props": {
+                        "style": {
+                            "fontSize": "22px",
+                            "fontWeight": "bold",
+                            "color": "#ffffff",
+                            "backgroundColor": color,
+                            "padding": "8px",
+                            "borderRadius": "5px",
+                            "display": "inline-block",
+                            "textAlign": "center",
+                            "marginBottom": "40px"
                         }
                     }
-                ]
-            },
-            img_component  # 添加二维码图片或提示信息
-        ]
+                },
+                img_component,  # 二维码图片
+                {
+                    "component": "div",  
+                    "text": "所有的登录二维码都会在这里展示",
+                    "props": {
+                        "style": {
+                            "fontSize": "16px",
+                            "backgroundColor": "#87CEFA", 
+                            "padding": "10px", 
+                            "borderRadius": "5px",  
+                            "color": "#ffffff",
+                            "marginTop": "20px"
+                        }
+                    }
+                }
+            ]
+        }
+    ]
 
         return base_content
 
@@ -1032,17 +1044,18 @@ class Dydebug(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        return [
-            {
-                "cmd": "/push_qr",
-                "event": EventType.PluginAction,
-                "desc": "立即推送登录二维码到pushplus",
-                "category": "",
-                "data": {
-                    "action": "push_qrcode"
-                }
-            }
-        ]
+        pass
+        # return [
+        #     {
+        #         "cmd": "/push_qr",
+        #         "event": EventType.PluginAction,
+        #         "desc": "立即推送登录二维码到pushplus",
+        #         "category": "",
+        #         "data": {
+        #             "action": "push_qrcode"
+        #         }
+        #     }
+        # ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
