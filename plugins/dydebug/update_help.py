@@ -50,7 +50,6 @@ class PyCookieCloud:
             resp = requests.get(self.url, timeout=3)  # 设置超时为3秒
             return resp.status_code == 200
         except Exception as e:
-            print(str(e))
             return False
 
     def update_cookie(self, cookie: Dict[str, Any]) -> bool:
