@@ -402,41 +402,26 @@ class Dydebug(_PluginBase):
             self.try_connect_cc()  # 再尝试一次连接
             if self._cc_server is None:
                 return
-    
+
         if self._use_cookiecloud and self._cc_server:
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
                 if self._cc_server.check_connection():
                     current_url = page.url
                     current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-    
-                    # 检查 current_cookies 是否为 None
                     if current_cookies is None:
                         logger.error("无法获取当前 cookies")
                         return
-    
+
                     formatted_cookies = {}
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
                         if domain is None:
-                            logger.error("cookie 缺少 domain 信息")
                             continue  # 跳过没有 domain 的 cookie
-    
-                        # 保留指定的 domain
-                        if domain != '.work.weixin.qq.com':
-                            continue  # 如果不需要保留该 domain 的 cookie，直接跳过
-    
+
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
-    
-                    logger.info(f"格式化后的 cookies: {formatted_cookies}")  # 输出格式化后的 cookies
-    
-                    # 确保格式化后的 cookies 不为空
-                    if not formatted_cookies:
-                        logger.error("没有有效的 cookies 进行更新")
-                        return
-    
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
@@ -445,10 +430,10 @@ class Dydebug(_PluginBase):
                 else:
                     logger.error("连接 CookieCloud 失败", self._server)
             except Exception as e:
-                logger.error(f"更新 cookie 发生错误: {e}, 当前 URL: {current_url}, 当前 Cookies: {current_cookies}, 格式化后的 Cookies: {formatted_cookies}")
+                logger.error(
+                    f"更新 cookie 发生错误: {e}")
         else:
             logger.error("CookieCloud 配置错误, 不刷新 cookie")
-
 
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
         try:
@@ -1120,18 +1105,5 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
