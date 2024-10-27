@@ -3,41 +3,37 @@ from typing import Dict, Any
 import json
 import requests
 import base64
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from os import urandom
+from hashlib import md5
+from Crypto import Random
+from Crypto.Cipher import AES
 
 
-def pad(data: bytes) -> bytes:
-    padder = padding.PKCS7(algorithms.AES.block_size).padder()
-    padded_data = padder.update(data) + padder.finalize()
-    return padded_data
-
-def bytes_to_key(data: bytes, salt: bytes, output: int = 48) -> bytes:
+def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
+    # 兼容v2 将bytes_to_key和encrypt导入
     assert len(salt) == 8, len(salt)
     data += salt
-    key = hashlib.md5(data).digest()
+    key = md5(data).digest()
     final_key = key
     while len(final_key) < output:
-        key = hashlib.md5(key + data).digest()
+        key = md5(key + data).digest()
         final_key += key
     return final_key[:output]
 
 
 def encrypt(message: bytes, passphrase: bytes) -> bytes:
-    salt = urandom(8)
+    """
+    CryptoJS 加密原文
+
+    This is a modified copy of https://stackoverflow.com/questions/36762098/how-to-decrypt-password-from-javascript-cryptojs-aes-encryptpassword-passphras
+    """
+    salt = Random.new().read(8)
     key_iv = bytes_to_key(passphrase, salt, 32 + 16)
     key = key_iv[:32]
     iv = key_iv[32:]
-
-    # Create AES cipher object
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-    encryptor = cipher.encryptor()
-
-    encrypted_message = encryptor.update(pad(message)) + encryptor.finalize()
-    return base64.b64encode(b"Salted__" + salt + encrypted_message)
-
+    aes = AES.new(key, AES.MODE_CBC, iv)
+    length = 16 - (len(message) % 16)
+    data = message + (chr(length) * length).encode()
+    return base64.b64encode(b"Salted__" + salt + aes.encrypt(data))
 
 class PyCookieCloud:
     def __init__(self, url: str, uuid: str, password: str):
