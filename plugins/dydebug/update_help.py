@@ -1,9 +1,7 @@
-import hashlib
 from typing import Dict, Any
 import json
 import requests
 import base64
-# from hashlib import md5
 import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
