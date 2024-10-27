@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.4.2"
+    plugin_version = "0.4.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -79,7 +79,6 @@ class Dydebug(_PluginBase):
     # 过期时间
     _future_timestamp = 0
 
-    # -------cookie add------------
     # cookie有效检测
     # _cookie_valid = False
     # 使用CookieCloud开关
@@ -89,7 +88,6 @@ class Dydebug(_PluginBase):
     # 登录cookie
     _cookie_header = ""
     _server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
-    # -------cookie END------------
 
     _cookiecloud = CookieCloudHelper()
     # 定时器
@@ -126,7 +124,7 @@ class Dydebug(_PluginBase):
 
         # 停止现有任务
         self.stop_service()
-        if self._enabled or self._onlyonce:
+        if self._enabled or self._onlyonce and self._input_id_list:
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
             # 运行一次定时服务
@@ -404,33 +402,35 @@ class Dydebug(_PluginBase):
         if self._use_cookiecloud and self._cc_server:
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
-                # logger.info("debug  开始连接CookieCloud")
                 if self._cc_server.check_connection():
-                    # logger.info("成功连接CookieCloud")
                     current_url = page.url
                     current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-                    # logger.info("原始 cookies：", current_cookies)
+                    if current_cookies is None:
+                        logger.error("无法获取当前 cookies")
+                        return
+
                     formatted_cookies = {}
                     for cookie in current_cookies:
-                        domain = cookie['domain']
+                        domain = cookie.get('domain')
+                        if domain is None:
+                            logger.error("cookie 缺少 domain 信息")
+                            continue  # 跳过没有 domain 的 cookie
+
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
-                        logger.info("更新CookieCloud成功")
+                        logger.info("更新 CookieCloud 成功")
                     else:
-                        logger.error("更新CookieCloud失败")
+                        logger.error("更新 CookieCloud 失败")
                 else:
-                    logger.error("连接CookieCloud失败", self._server, settings.COOKIECLOUD_KEY,
-                                 settings.COOKIECLOUD_PASSWORD)
+                    logger.error("连接 CookieCloud 失败", self._server)
             except Exception as e:
-                logger.error(f"更新cookie发生错误: {e}")
+                logger.error(f"更新 cookie 发生错误: {e}")
         else:
-            logger.error("CookieCloud配置错误, 不刷新cookie")
+            logger.error("CookieCloud 配置错误, 不刷新 cookie")
 
-
-    # ----------cookie addd-----------------
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
         try:
             cookie_header = ''
@@ -512,8 +512,11 @@ class Dydebug(_PluginBase):
             # 在这里使用更安全的方式来检查元素是否存在
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
-                logger.info("等待30秒，请将短信验证码请以'？'结束，发送到<企业微信应用> 如： 110301？")
-                time.sleep(30)  # 多等30秒
+                if task == 'local_scanning':
+                    time.sleep(6)
+                else:
+                    logger.info("等待30秒，请将短信验证码请以'？'结束，发送到<企业微信应用> 如： 110301？")
+                    time.sleep(30)  # 多等30秒
                 if self._verification_code:
                     # logger.info("输入验证码：" + self._verification_code)
                     for digit in self._verification_code:
@@ -1098,4 +1101,18 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
