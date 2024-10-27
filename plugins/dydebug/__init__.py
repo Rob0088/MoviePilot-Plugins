@@ -418,11 +418,20 @@ class Dydebug(_PluginBase):
                             logger.error("cookie 缺少 domain 信息")
                             continue  # 跳过没有 domain 的 cookie
     
+                        # 保留指定的 domain
+                        if domain != '.work.weixin.qq.com':
+                            continue  # 如果不需要保留该 domain 的 cookie，直接跳过
+    
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
     
                     logger.info(f"格式化后的 cookies: {formatted_cookies}")  # 输出格式化后的 cookies
+    
+                    # 确保格式化后的 cookies 不为空
+                    if not formatted_cookies:
+                        logger.error("没有有效的 cookies 进行更新")
+                        return
     
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
