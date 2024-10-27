@@ -392,49 +392,49 @@ class Dydebug(_PluginBase):
         finally:
             pass
 
-def _update_cookie(self, page, context):
-    self._future_timestamp = 0  # 标记二维码失效
-    if not self._cc_server.check_connection:  # 连接失败返回 False
-        self.try_connect_cc()  # 再尝试一次连接
-        if self._cc_server is None:
-            return
-
-    if self._use_cookiecloud and self._cc_server:
-        logger.info("使用二维码登录成功，开始刷新cookie")
-        try:
-            if self._cc_server.check_connection():
-                current_url = page.url
-                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-
-                # 检查 current_cookies 是否为 None
-                if current_cookies is None:
-                    logger.error("无法获取当前 cookies")
-                    return
-
-                formatted_cookies = {}
-                for cookie in current_cookies:
-                    domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
-                    if domain is None:
-                        logger.error("cookie 缺少 domain 信息")
-                        continue  # 跳过没有 domain 的 cookie
-
-                    if domain not in formatted_cookies:
-                        formatted_cookies[domain] = []
-                    formatted_cookies[domain].append(cookie)
-
-                logger.info(f"格式化后的 cookies: {formatted_cookies}")  # 输出格式化后的 cookies
-
-                flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
-                if flag:
-                    logger.info("更新 CookieCloud 成功")
+    def _update_cookie(self, page, context):
+        self._future_timestamp = 0  # 标记二维码失效
+        if not self._cc_server.check_connection:  # 连接失败返回 False
+            self.try_connect_cc()  # 再尝试一次连接
+            if self._cc_server is None:
+                return
+    
+        if self._use_cookiecloud and self._cc_server:
+            logger.info("使用二维码登录成功，开始刷新cookie")
+            try:
+                if self._cc_server.check_connection():
+                    current_url = page.url
+                    current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
+    
+                    # 检查 current_cookies 是否为 None
+                    if current_cookies is None:
+                        logger.error("无法获取当前 cookies")
+                        return
+    
+                    formatted_cookies = {}
+                    for cookie in current_cookies:
+                        domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
+                        if domain is None:
+                            logger.error("cookie 缺少 domain 信息")
+                            continue  # 跳过没有 domain 的 cookie
+    
+                        if domain not in formatted_cookies:
+                            formatted_cookies[domain] = []
+                        formatted_cookies[domain].append(cookie)
+    
+                    logger.info(f"格式化后的 cookies: {formatted_cookies}")  # 输出格式化后的 cookies
+    
+                    flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
+                    if flag:
+                        logger.info("更新 CookieCloud 成功")
+                    else:
+                        logger.error("更新 CookieCloud 失败")
                 else:
-                    logger.error("更新 CookieCloud 失败")
-            else:
-                logger.error("连接 CookieCloud 失败", self._server)
-        except Exception as e:
-            logger.error(f"更新 cookie 发生错误: {e}, 当前 URL: {current_url}, 当前 Cookies: {current_cookies}, 格式化后的 Cookies: {formatted_cookies}")
-    else:
-        logger.error("CookieCloud 配置错误, 不刷新 cookie")
+                    logger.error("连接 CookieCloud 失败", self._server)
+            except Exception as e:
+                logger.error(f"更新 cookie 发生错误: {e}, 当前 URL: {current_url}, 当前 Cookies: {current_cookies}, 格式化后的 Cookies: {formatted_cookies}")
+        else:
+            logger.error("CookieCloud 配置错误, 不刷新 cookie")
 
 
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
