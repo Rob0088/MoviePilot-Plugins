@@ -3,7 +3,8 @@ from typing import Dict, Any
 import json
 import requests
 import base64
-from hashlib import md5
+# from hashlib import md5
+import hashlib
 from Crypto import Random
 from Crypto.Cipher import AES
 
@@ -12,10 +13,10 @@ def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
     # 兼容v2 将bytes_to_key和encrypt导入
     assert len(salt) == 8, len(salt)
     data += salt
-    key = md5(data).digest()
+    key = hashlib.md5(data).digest()
     final_key = key
     while len(final_key) < output:
-        key = md5(key + data).digest()
+        key = hashlib.md5(key + data).digest()
         final_key += key
     return final_key[:output]
 
