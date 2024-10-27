@@ -184,7 +184,10 @@ class Dydebug(_PluginBase):
                 time.sleep(3)  # 页面加载等待时间
 
                 if self.find_qrc(page):
-                    logger.info("请<重新进入!>插件面板扫码!，每20秒检查登录状态，最大尝试5次")
+                    current_time = datetime.now()
+                    future_time = current_time + timedelta(seconds=110)
+                    self._future_timestamp = int(future_time.timestamp())
+                    logger.info("请重新进入插件面板扫码!，每20秒检查登录状态，最大尝试5次")
                     max_attempts = 5
                     attempt = 0
                     while attempt < max_attempts:
@@ -192,7 +195,6 @@ class Dydebug(_PluginBase):
                         # logger.info(f"第 {attempt} 次检查登录状态...")
                         time.sleep(20)  # 每20秒检查一次
                         if self.check_login_status(page, task='local_scanning'):
-                            logger.info("登录成功，更新cookie")
                             self._update_cookie(page, context)  # 刷新cookie
                             self.click_app_management_buttons(page)
                             break
@@ -200,6 +202,7 @@ class Dydebug(_PluginBase):
                         logger.info("未检测到登录，任务结束")
                 else:
                     logger.info("未找到二维码，任务结束")
+                logger.info("----------------------本次任务结束----------------------")
                 browser.close()
         except Exception as e:
             logger.error(f"本地扫码任务: 本地扫码失败: {e}")
@@ -311,9 +314,6 @@ class Dydebug(_PluginBase):
             # 查找二维码图片元素
             qr_code_element = frame.query_selector("img.qrcode_login_img")
             if qr_code_element:
-                current_time = datetime.now()
-                future_time = current_time + timedelta(seconds=110)
-                self._future_timestamp = int(future_time.timestamp())
                 # logger.info("找到二维码图片元素")
                 # 保存二维码图片
                 qr_code_url = qr_code_element.get_attribute('src')
@@ -396,7 +396,7 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
-        if self._cc_server is None:
+        if not self._cc_server.check_connection:  # 连接失败返回 False
             self.try_connect_cc()  # 再尝试一次连接
             if self._cc_server is None:
                 return
@@ -515,7 +515,7 @@ class Dydebug(_PluginBase):
                 logger.info("等待30秒，请将短信验证码请以'？'结束，发送到<企业微信应用> 如： 110301？")
                 time.sleep(30)  # 多等30秒
                 if self._verification_code:
-                    logger.info("输入验证码：" + self._verification_code)
+                    # logger.info("输入验证码：" + self._verification_code)
                     for digit in self._verification_code:
                         page.keyboard.press(digit)
                         time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
@@ -918,17 +918,18 @@ class Dydebug(_PluginBase):
         if current_time > self._future_timestamp:
             vaild_text = "二维码已过期"
             color = "#ff0000"
+            self._qr_code_image = None
         else:
             # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
-            expiration_time = self._future_timestamp - current_time
-            vaild_text = f"二维码有效，剩余时间: {expiration_time} 秒"
+            expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            vaild_text = f"二维码有效，过期时间: {expiration_time}"
             color = "#32CD32"
 
         # 如果self._qr_code_image为None，返回提示信息
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "运行过程所有的登录二维码都会在此展示",
+                "text": "所有的登录二维码都会在此展示，有效时间仅对应‘本地扫码功能’",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -1097,3 +1098,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
