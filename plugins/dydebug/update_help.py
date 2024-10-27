@@ -2,7 +2,41 @@ import hashlib
 from typing import Dict, Any
 import json
 import requests
-from app.utils.common import encrypt
+import base64
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from os import urandom
+
+
+def pad(data: bytes) -> bytes:
+    padder = padding.PKCS7(algorithms.AES.block_size).padder()
+    padded_data = padder.update(data) + padder.finalize()
+    return padded_data
+
+def bytes_to_key(data: bytes, salt: bytes, output: int = 48) -> bytes:
+    assert len(salt) == 8, len(salt)
+    data += salt
+    key = hashlib.md5(data).digest()
+    final_key = key
+    while len(final_key) < output:
+        key = hashlib.md5(key + data).digest()
+        final_key += key
+    return final_key[:output]
+
+
+def encrypt(message: bytes, passphrase: bytes) -> bytes:
+    salt = urandom(8)
+    key_iv = bytes_to_key(passphrase, salt, 32 + 16)
+    key = key_iv[:32]
+    iv = key_iv[32:]
+
+    # Create AES cipher object
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    encrypted_message = encryptor.update(pad(message)) + encryptor.finalize()
+    return base64.b64encode(b"Salted__" + salt + encrypted_message)
 
 
 class PyCookieCloud:
@@ -24,6 +58,7 @@ class PyCookieCloud:
             else:
                 return False
         except Exception as e:
+            print(str(e))
             return False
 
     def update_cookie(self, cookie: Dict[str, Any]) -> bool:
@@ -52,5 +87,3 @@ class PyCookieCloud:
         md5 = hashlib.md5()
         md5.update((self.uuid + '-' + self.password).encode('utf-8'))
         return md5.hexdigest()[:16]
-
-
