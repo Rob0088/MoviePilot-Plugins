@@ -270,17 +270,21 @@ class Dydebug(_PluginBase):
 
     def try_connect_cc(self):
         if self._use_cookiecloud:
-            if settings.COOKIECLOUD_ENABLE_LOCAL:
-                self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
-                                                password=settings.COOKIECLOUD_PASSWORD)
-                logger.info("使用内建CookieCloud服务器")
-            else:  # 使用设置里的cookieCloud
-                self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
-                                                password=settings.COOKIECLOUD_PASSWORD)
-                logger.info("使用自定义CookieCloud服务器")
-            if not self._cc_server.check_connection():
+            if settings.COOKIECLOUD_KEY and settings.COOKIECLOUD_PASSWORD:  # 使用设置里的cookieCloud
+                if settings.COOKIECLOUD_ENABLE_LOCAL:
+                    self._cc_server = PyCookieCloud(url=self._server, uuid=settings.COOKIECLOUD_KEY,
+                                                    password=settings.COOKIECLOUD_PASSWORD)
+                    logger.info("使用内建CookieCloud服务器")
+                else:  # 使用设置里的cookieCloud
+                    self._cc_server = PyCookieCloud(url=settings.COOKIECLOUD_HOST, uuid=settings.COOKIECLOUD_KEY,
+                                                    password=settings.COOKIECLOUD_PASSWORD)
+                    logger.info("使用自定义CookieCloud服务器")
+                if not self._cc_server.check_connection():
+                    self._cc_server = None
+                    logger.error("没有可用的CookieCloud服务器")
+            else:  # 未设置cookieCloud
                 self._cc_server = None
-                logger.error("没有可用的CookieCloud服务器")
+                logger.error("没有配置CookieCloud的用户KEY和PASSWORD")
 
     def get_ip_from_url(self, url):
         try:
