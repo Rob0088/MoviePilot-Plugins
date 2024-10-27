@@ -19,7 +19,7 @@ from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.plugins.dynamicwechat.update_help import PyCookieCloud
-from app.schemas.types import EventType, NotificationType
+from app.schemas.types import EventType
 
 
 class Dydebug(_PluginBase):
@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.3.2"
+    plugin_version = "0.3.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
