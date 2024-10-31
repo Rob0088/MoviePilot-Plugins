@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.5.0"
+    plugin_version = "0.5.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -124,7 +124,7 @@ class Dydebug(_PluginBase):
 
         # 停止现有任务
         self.stop_service()
-        if self._enabled or self._onlyonce and self._input_id_list:
+        if (self._enabled or self._onlyonce) and self._input_id_list:
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
             # 运行一次定时服务
@@ -398,12 +398,11 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
-        if not self._cc_server.check_connection:  # 连接失败返回 False
-            self.try_connect_cc()  # 再尝试一次连接
-            if self._cc_server is None:
-                return
-
-        if self._use_cookiecloud and self._cc_server:
+        if self._use_cookiecloud:
+            if not self._cc_server:  # 连接失败返回 False
+                self.try_connect_cc()  # 再尝试一次连接
+                if self._cc_server is None:
+                    return
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
                 if self._cc_server.check_connection():
@@ -583,6 +582,12 @@ class Dydebug(_PluginBase):
                             logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
                 if self._ip_changed:
                     logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
+                    self.post_message(
+                        mtype=NotificationType.Plugin,
+                        title="更新IP成功",
+                        text='应用: ' + app_id + ' 输入IP：' + self._current_ip_address,
+                        # image=img_src
+                    )
             return
         else:
             logger.error("未找到应用id，修改IP失败")
@@ -936,7 +941,7 @@ class Dydebug(_PluginBase):
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "所有的登录二维码都会在此展示，有效时间仅对应‘本地扫码功能’",
+                "text": "登录二维码都会在此展示，过期时间仅对应‘本地扫码功能’，二维码有6秒延时",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -1032,7 +1037,7 @@ class Dydebug(_PluginBase):
                         login_status = self.check_login_status(page, 'push_qr_code')
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
-                            logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
+                            # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
                         logger.warning("远程推送任务: 未配置pushplus_token和helloimg_s_token")
@@ -1105,5 +1110,18 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
