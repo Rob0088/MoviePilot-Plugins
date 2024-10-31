@@ -19,7 +19,7 @@ from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.plugins.dydebug.update_help import PyCookieCloud
-from app.schemas.types import EventType
+from app.schemas.types import EventType, NotificationType
 
 
 class Dydebug(_PluginBase):
