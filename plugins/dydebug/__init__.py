@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.5.1"
+    plugin_version = "0.6.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -83,8 +83,8 @@ class Dydebug(_PluginBase):
     # _cookie_valid = False
     # 使用CookieCloud开关
     _use_cookiecloud = True
-    # 从CookieCloud获取的cookie
-    _cookie_from_CC = ""
+    # cookie存活时间
+    _cookie_lifetime = 0
     # 登录cookie
     _cookie_header = ""
     _server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
@@ -104,7 +104,6 @@ class Dydebug(_PluginBase):
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
-        self._cookie_from_CC = ""
         self._current_ip_address = self.get_ip_from_url(self._ip_urls[0])
         if config:
             self._enabled = config.get("enabled")
@@ -114,7 +113,7 @@ class Dydebug(_PluginBase):
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
-            self._cookie_from_CC = config.get("cookie_from_CC")
+            self._cookie_lifetime = config.get("cookie_lifetime")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
@@ -398,6 +397,7 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
+        self._cookie_lifetime = 0  # 重置cookie存活时间
         if self._use_cookiecloud:
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
@@ -432,15 +432,12 @@ class Dydebug(_PluginBase):
                 logger.error(
                     f"更新 cookie 发生错误: {e}")
         else:
-            logger.error("CookieCloud 配置错误, 不刷新 cookie")
+            logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
         try:
             cookie_header = ''
             if self._use_cookiecloud:
-                # if self._cookie_valid:  # 如果无效
-                # return self._cookie_from_CC
-                # return True
                 cookies, msg = self._cookiecloud.download()
                 if not cookies:  # CookieCloud获取cookie失败
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
@@ -456,7 +453,7 @@ class Dydebug(_PluginBase):
             else:  # 不使用CookieCloud
                 return
             cookie = self.parse_cookie_header(cookie_header)
-            self._cookie_from_CC = cookie
+            # self._cookie_lifetime = cookie
             return cookie
         except Exception as e:
             logger.error(f"从CookieCloud获取cookie错误，错误原因:{e}")
@@ -477,6 +474,7 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
+        self._cookie_lifetime += 1200   # 加20分钟
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
@@ -582,10 +580,12 @@ class Dydebug(_PluginBase):
                             logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
                 if self._ip_changed:
                     logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
+                    ip_parts = self._current_ip_address.split('.')
+                    masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
                     self.post_message(
                         mtype=NotificationType.Plugin,
-                        title="更新IP成功",
-                        text='应用: ' + app_id + ' 输入IP：' + self._current_ip_address,
+                        title="更新可信IP成功",
+                        text='应用: ' + app_id + ' 输入IP：' + masked_ip,
                         # image=img_src
                     )
             return
@@ -673,7 +673,7 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            "cookie_from_CC": self._cookie_from_CC,
+            "cookie_lifetime": self._cookie_lifetime,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
         })
@@ -921,7 +921,6 @@ class Dydebug(_PluginBase):
             "input_id_list": "",
         }
 
-
     def get_page(self) -> List[dict]:
         # 获取当前时间戳
         current_time = datetime.now().timestamp()
@@ -941,7 +940,7 @@ class Dydebug(_PluginBase):
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "登录二维码都会在此展示，过期时间仅对应‘本地扫码功能’，二维码有6秒延时",
+                "text": "登录二维码都会在此展示，二维码有6秒延时，过期时间仅对应‘本地扫码功能’",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -974,6 +973,29 @@ class Dydebug(_PluginBase):
                 }
             }
 
+        # 计算 cookie_lifetime 的天数、小时数和分钟数
+        cookie_lifetime_days = self._cookie_lifetime // 86400  # 一天的秒数为 86400
+        cookie_lifetime_hours = (self._cookie_lifetime % 86400) // 3600  # 计算小时数
+        cookie_lifetime_minutes = (self._cookie_lifetime % 3600) // 60  # 计算分钟数
+
+        cookie_lifetime_text = (
+            f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
+            if self._cookie_lifetime > 0
+            else " "
+        )
+        cookie_lifetime_component = {
+            "component": "div",
+            "text": cookie_lifetime_text,
+            "props": {
+                "style": {
+                    "fontSize": "18px",
+                    "color": "#ffffff",
+                    "textAlign": "center",
+                    "marginTop": "10px"
+                }
+            }
+        }
+
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
         base_content = [
             {
@@ -1000,7 +1022,8 @@ class Dydebug(_PluginBase):
                                 "marginBottom": "40px"
                             }
                         }
-                    }
+                    },
+                    cookie_lifetime_component  # 显示 Cookie 存活时间
                 ]
             },
             img_component  # 二维码图片
@@ -1110,7 +1133,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
 
 
 
