@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.6.6
+    plugin_version = "0.6.7
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -930,13 +930,11 @@ class Dydebug(_PluginBase):
             vaild_text = "二维码已过期"
             color = "#ff0000"
             self._qr_code_image = None
-            show_cookie_lifetime = True
         else:
             # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
             expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
             vaild_text = f"二维码有效，过期时间: {expiration_time}"
             color = "#32CD32"
-            show_cookie_lifetime = False
     
         # 如果self._qr_code_image为None，返回提示信息
         if self._qr_code_image is None:
@@ -1002,67 +1000,41 @@ class Dydebug(_PluginBase):
             }
         }
     
-        # 页面内容，按照官方示例结构进行调整
+        # 页面内容，显示二维码状态信息和二维码图片或提示信息
         base_content = [
             {
-                "component": "VRow",
+                "component": "div",
+                "props": {
+                    "style": {
+                        "textAlign": "center"
+                    }
+                },
                 "content": [
                     {
-                        "component": "VCol",
+                        "component": "div",
+                        "text": vaild_text,
                         "props": {
-                            "cols": 12
-                        },
-                        "content": [
-                            {
-                                "component": "div",
-                                "props": {
-                                    "style": {
-                                        "textAlign": "center"
-                                    }
-                                },
-                                "content": [
-                                    {
-                                        "component": "div",
-                                        "text": vaild_text,
-                                        "props": {
-                                            "style": {
-                                                "fontSize": "22px",
-                                                "fontWeight": "bold",
-                                                "color": "#ffffff",
-                                                "backgroundColor": color,
-                                                "padding": "8px",
-                                                "borderRadius": "5px",
-                                                "display": "inline-block",
-                                                "textAlign": "center",
-                                                "marginBottom": "10px"
-                                            }
-                                        }
-                                    },
-                                    cookie_lifetime_component if show_cookie_lifetime else None  # 显示 Cookie 存活时间（二维码过期时）
-                                ]
+                            "style": {
+                                "fontSize": "22px",
+                                "fontWeight": "bold",
+                                "color": "#ffffff",
+                                "backgroundColor": color,
+                                "padding": "8px",
+                                "borderRadius": "5px",
+                                "display": "inline-block",
+                                "textAlign": "center",
+                                "marginBottom": "10px"
                             }
-                        ]
+                        }
                     },
-                    {
-                        "component": "VCol",
-                        "props": {
-                            "cols": 12,
-                            "class": "text-center"
-                        },
-                        "content": [
-                            img_component  # 二维码图片或提示信息
-                        ]
-                    }
+                    cookie_lifetime_component,  # 显示 Cookie 存活时间
+                    img_component  # 二维码图片或提示信息
                 ]
             }
         ]
     
-        # 移除 None 元素
-        base_content[0]["content"][0]["content"][0]["content"] = [
-            component for component in base_content[0]["content"][0]["content"][0]["content"] if component is not None
-        ]
-    
         return base_content
+
 
 
 
