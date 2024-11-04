@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.6.2"
+    plugin_version = "0.6.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -989,9 +989,13 @@ class Dydebug(_PluginBase):
             "props": {
                 "style": {
                     "fontSize": "18px",
-                    "color": "#ffffff",
+                    "color": "#333333",  # 深色文字颜色
+                    "backgroundColor": "#d4f4dd",  # 浅绿色背景颜色
+                    "padding": "8px",
+                    "borderRadius": "5px",
                     "textAlign": "center",
-                    "marginTop": "10px"
+                    "marginTop": "10px",
+                    "display": "inline-block"
                 }
             }
         }
