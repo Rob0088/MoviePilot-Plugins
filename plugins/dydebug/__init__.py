@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.6.9"
+    plugin_version = "0.7.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -980,8 +980,8 @@ class Dydebug(_PluginBase):
     
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
-            if self._cookie_lifetime > 0
-            else "未刷新过Cookie"
+            # if self._cookie_lifetime > 0
+            # else "未刷新过Cookie"
         )
         cookie_lifetime_component = {
             "component": "div",
