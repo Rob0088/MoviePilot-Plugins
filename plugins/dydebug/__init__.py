@@ -981,7 +981,7 @@ class Dydebug(_PluginBase):
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
             if self._cookie_lifetime > 0
-            else " "
+            else "未刷新过Cookie"
         )
         cookie_lifetime_component = {
             "component": "div",
