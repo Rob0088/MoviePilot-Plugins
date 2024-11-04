@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.6.4"
+    plugin_version = "0.6.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -924,7 +924,7 @@ class Dydebug(_PluginBase):
     def get_page(self) -> List[dict]:
         # 获取当前时间戳
         current_time = datetime.now().timestamp()
-
+    
         # 判断二维码是否过期
         if current_time > self._future_timestamp:
             vaild_text = "二维码已过期"
@@ -935,7 +935,7 @@ class Dydebug(_PluginBase):
             expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
             vaild_text = f"二维码有效，过期时间: {expiration_time}"
             color = "#32CD32"
-
+    
         # 如果self._qr_code_image为None，返回提示信息
         if self._qr_code_image is None:
             img_component = {
@@ -956,7 +956,7 @@ class Dydebug(_PluginBase):
             # 将图片数据转为 base64 编码
             base64_image = base64.b64encode(qr_image_data).decode('utf-8')
             img_src = f"data:image/png;base64,{base64_image}"
-
+    
             # 生成图片组件
             img_component = {
                 "component": "img",
@@ -972,12 +972,12 @@ class Dydebug(_PluginBase):
                     }
                 }
             }
-
+    
         # 计算 cookie_lifetime 的天数、小时数和分钟数
         cookie_lifetime_days = self._cookie_lifetime // 86400  # 一天的秒数为 86400
         cookie_lifetime_hours = (self._cookie_lifetime % 86400) // 3600  # 计算小时数
         cookie_lifetime_minutes = (self._cookie_lifetime % 3600) // 60  # 计算分钟数
-
+    
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
             if self._cookie_lifetime > 0
@@ -990,7 +990,7 @@ class Dydebug(_PluginBase):
                 "style": {
                     "fontSize": "18px",
                     "color": "#ffffff",  # 白色字体
-                    "backgroundColor": "#6fcf97",  # 更深的绿色背景
+                    "backgroundColor": "#4CAF50",  # 更深的绿色背景
                     "padding": "10px",
                     "borderRadius": "5px",
                     "textAlign": "center",
@@ -999,42 +999,64 @@ class Dydebug(_PluginBase):
                 }
             }
         }
-
-
-        # 页面内容，显示二维码状态信息和二维码图片或提示信息
+    
+        # 页面内容，按照官方示例结构进行调整
         base_content = [
             {
-                "component": "div",
-                "props": {
-                    "style": {
-                        "textAlign": "center"
-                    }
-                },
+                "component": "VRow",
                 "content": [
                     {
-                        "component": "div",
-                        "text": vaild_text,
+                        "component": "VCol",
                         "props": {
-                            "style": {
-                                "fontSize": "22px",
-                                "fontWeight": "bold",
-                                "color": "#ffffff",
-                                "backgroundColor": color,
-                                "padding": "8px",
-                                "borderRadius": "5px",
-                                "display": "inline-block",
-                                "textAlign": "center",
-                                "marginBottom": "40px"
+                            "cols": 12
+                        },
+                        "content": [
+                            {
+                                "component": "div",
+                                "props": {
+                                    "style": {
+                                        "textAlign": "center"
+                                    }
+                                },
+                                "content": [
+                                    {
+                                        "component": "div",
+                                        "text": vaild_text,
+                                        "props": {
+                                            "style": {
+                                                "fontSize": "22px",
+                                                "fontWeight": "bold",
+                                                "color": "#ffffff",
+                                                "backgroundColor": color,
+                                                "padding": "8px",
+                                                "borderRadius": "5px",
+                                                "display": "inline-block",
+                                                "textAlign": "center",
+                                                "marginBottom": "40px"
+                                            }
+                                        }
+                                    },
+                                    cookie_lifetime_component  # 显示 Cookie 存活时间
+                                ]
                             }
-                        }
+                        ]
                     },
-                    cookie_lifetime_component  # 显示 Cookie 存活时间
+                    {
+                        "component": "VCol",
+                        "props": {
+                            "cols": 12,
+                            "class": "text-center"
+                        },
+                        "content": [
+                            img_component  # 二维码图片
+                        ]
+                    }
                 ]
-            },
-            img_component  # 二维码图片
+            }
         ]
-
+    
         return base_content
+
 
     @eventmanager.register(EventType.PluginAction)
     def push_qr_code(self, event: Event = None):
