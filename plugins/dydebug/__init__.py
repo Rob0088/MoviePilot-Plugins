@@ -989,9 +989,9 @@ class Dydebug(_PluginBase):
             "props": {
                 "style": {
                     "fontSize": "18px",
-                    "color": "#333333",  # 深色文字颜色
-                    "backgroundColor": "#d4f4dd",  # 浅绿色背景颜色
-                    "padding": "8px",
+                    "color": "#ffffff",  # 白色字体
+                    "backgroundColor": "#6fcf97",  # 更深的绿色背景
+                    "padding": "10px",
                     "borderRadius": "5px",
                     "textAlign": "center",
                     "marginTop": "10px",
@@ -999,6 +999,7 @@ class Dydebug(_PluginBase):
                 }
             }
         }
+
 
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
         base_content = [
