@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.6.8"
+    plugin_version = "0.6.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1027,13 +1027,23 @@ class Dydebug(_PluginBase):
                             }
                         }
                     },
-                    cookie_lifetime_component,  # 显示 Cookie 存活时间
+                    {
+                        "component": "div",
+                        "content": [cookie_lifetime_component],
+                        "props": {
+                            "style": {
+                                "textAlign": "center",
+                                "marginBottom": "10px"
+                            }
+                        }
+                    },
                     img_component  # 二维码图片或提示信息
                 ]
             }
         ]
     
         return base_content
+
 
 
 
