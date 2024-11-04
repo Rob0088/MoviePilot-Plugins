@@ -113,13 +113,13 @@ class Dydebug(_PluginBase):
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
-            self._cookie_lifetime = config.get("cookie_lifetime")
+            # self._cookie_lifetime = config.get("cookie_lifetime")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        self.try_connect_cc()
+        # self.try_connect_cc()
 
         # 停止现有任务
         self.stop_service()
@@ -397,8 +397,8 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
-        self._cookie_lifetime = 0  # 重置cookie存活时间
         if self._use_cookiecloud:
+            self._cookie_lifetime = 0  # 重置cookie存活时间
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
                 if self._cc_server is None:
@@ -474,22 +474,25 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        self._cookie_lifetime += 1200   # 加20分钟
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                context = browser.new_context()
-                cookie = self.get_cookie()
-                if cookie:
-                    context.add_cookies(cookie)
-                page = context.new_page()
-                page.goto(self._wechatUrl)
-                time.sleep(3)
-                if not self.check_login_status(page, task='refresh_cookie'):
-                    logger.info("cookie已失效，下次IP变动推送二维码")
-                browser.close()
-        except Exception as e:
-            logger.error(f"cookie校验失败:{e}")
+        if self._use_cookiecloud:
+            self._cookie_lifetime += 1200   # 加20分钟
+            try:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                    context = browser.new_context()
+                    cookie = self.get_cookie()
+                    if cookie:
+                        context.add_cookies(cookie)
+                    page = context.new_page()
+                    page.goto(self._wechatUrl)
+                    time.sleep(3)
+                    if not self.check_login_status(page, task='refresh_cookie'):
+                        logger.info("cookie已失效，下次IP变动推送二维码")
+                    browser.close()
+            except Exception as e:
+                logger.error(f"cookie校验失败:{e}")
+        else:
+            return
 
     #
     def check_login_status(self, page, task):
@@ -673,7 +676,7 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            "cookie_lifetime": self._cookie_lifetime,
+            # "cookie_lifetime": self._cookie_lifetime,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
         })
@@ -920,11 +923,11 @@ class Dydebug(_PluginBase):
             "helloimg_token": "",
             "input_id_list": "",
         }
-    
+
     def get_page(self) -> List[dict]:
         # 获取当前时间戳
         current_time = datetime.now().timestamp()
-    
+
         # 判断二维码是否过期
         if current_time > self._future_timestamp:
             vaild_text = "二维码已过期"
@@ -935,7 +938,7 @@ class Dydebug(_PluginBase):
             expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
             vaild_text = f"二维码有效，过期时间: {expiration_time}"
             color = "#32CD32"
-    
+
         # 如果self._qr_code_image为None，返回提示信息
         if self._qr_code_image is None:
             img_component = {
@@ -956,7 +959,7 @@ class Dydebug(_PluginBase):
             # 将图片数据转为 base64 编码
             base64_image = base64.b64encode(qr_image_data).decode('utf-8')
             img_src = f"data:image/png;base64,{base64_image}"
-    
+
             # 生成图片组件
             img_component = {
                 "component": "img",
@@ -972,12 +975,12 @@ class Dydebug(_PluginBase):
                     }
                 }
             }
-    
+
         # 计算 cookie_lifetime 的天数、小时数和分钟数
         cookie_lifetime_days = self._cookie_lifetime // 86400  # 一天的秒数为 86400
         cookie_lifetime_hours = (self._cookie_lifetime % 86400) // 3600  # 计算小时数
         cookie_lifetime_minutes = (self._cookie_lifetime % 3600) // 60  # 计算分钟数
-    
+
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
             # if self._cookie_lifetime > 0
@@ -999,7 +1002,7 @@ class Dydebug(_PluginBase):
                 }
             }
         }
-    
+
         # 页面内容，显示二维码状态信息和二维码图片或提示信息
         base_content = [
             {
@@ -1041,12 +1044,8 @@ class Dydebug(_PluginBase):
                 ]
             }
         ]
-    
+
         return base_content
-
-
-
-
 
     @eventmanager.register(EventType.PluginAction)
     def push_qr_code(self, event: Event = None):
@@ -1150,17 +1149,5 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
-
-
-
-
-
-
-
-
-
-
 
 
