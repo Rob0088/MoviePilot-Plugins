@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.7.4"
+    plugin_version = "0.7.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -116,6 +116,7 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
+        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
 
         # 停止现有任务
         self.stop_service()
