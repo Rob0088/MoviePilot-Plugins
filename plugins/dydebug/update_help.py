@@ -3,12 +3,11 @@ import json
 import requests
 import base64
 import hashlib
+
 from typing import Dict, Any
 from Crypto import Random
 from Crypto.Cipher import AES
-from app.log import logger
 
-# 获取当前脚本所在目录
 script_dir = os.path.dirname(os.path.abspath(__file__))
 settings_file = os.path.join(script_dir, 'settings.json')
 
@@ -89,7 +88,6 @@ class PyCookieCloud:
 
     @staticmethod
     def load_cookie_lifetime():    # 返回时间戳 单位秒
-        logger.info('配置文件: ', settings_file)
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
