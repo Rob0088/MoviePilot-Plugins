@@ -389,8 +389,8 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
+        PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
         if self._use_cookiecloud:
-            PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
                 if self._cc_server is None:
@@ -477,7 +477,6 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     logger.info("cookie已失效，下次IP变动推送二维码")
-                    # PyCookieCloud.save_cookie_lifetime(0) 
                 else:
                     PyCookieCloud.increase_cookie_lifetime(1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
@@ -1137,3 +1136,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
+
+
