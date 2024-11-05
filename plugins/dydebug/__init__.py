@@ -81,10 +81,9 @@ class Dydebug(_PluginBase):
 
     # cookie有效检测
     # _cookie_valid = False
+    _cookie_lifetime = 0
     # 使用CookieCloud开关
     _use_cookiecloud = True
-    # cookie存活时间
-    _cookie_lifetime = 0
     # 登录cookie
     _cookie_header = ""
     _server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
@@ -95,7 +94,6 @@ class Dydebug(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         # 清空配置
-        self._server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
         self._helloimg_s_token = ''
         self._pushplus_token = ''
         self._ip_changed = True
@@ -113,13 +111,11 @@ class Dydebug(_PluginBase):
             self._current_ip_address = config.get("current_ip_address")
             self._pushplus_token = config.get("pushplus_token")
             self._helloimg_s_token = config.get("helloimg_s_token")
-            self._cookie_lifetime = config.get("cookie_lifetime")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        # self.try_connect_cc()
 
         # 停止现有任务
         self.stop_service()
@@ -196,9 +192,9 @@ class Dydebug(_PluginBase):
                             self.click_app_management_buttons(page)
                             break
                     else:
-                        logger.info("未检测到登录，任务结束")
+                        logger.info("用户可能没有扫码或登录失败，任务结束")
                 else:
-                    logger.info("未找到二维码，任务结束")
+                    logger.error("未找到二维码，任务结束")
                 logger.info("----------------------本次任务结束----------------------")
                 browser.close()
         except Exception as e:
@@ -398,7 +394,7 @@ class Dydebug(_PluginBase):
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
         if self._use_cookiecloud:
-            self._cookie_lifetime = 0  # 重置cookie存活时间
+            PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
                 if self._cc_server is None:
@@ -453,7 +449,6 @@ class Dydebug(_PluginBase):
             else:  # 不使用CookieCloud
                 return
             cookie = self.parse_cookie_header(cookie_header)
-            # self._cookie_lifetime = cookie
             return cookie
         except Exception as e:
             logger.error(f"从CookieCloud获取cookie错误，错误原因:{e}")
@@ -474,25 +469,23 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        if self._use_cookiecloud:
-            self._cookie_lifetime += 1200   # 加20分钟
-            try:
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                    context = browser.new_context()
-                    cookie = self.get_cookie()
-                    if cookie:
-                        context.add_cookies(cookie)
-                    page = context.new_page()
-                    page.goto(self._wechatUrl)
-                    time.sleep(3)
-                    if not self.check_login_status(page, task='refresh_cookie'):
-                        logger.info("cookie已失效，下次IP变动推送二维码")
-                    browser.close()
-            except Exception as e:
-                logger.error(f"cookie校验失败:{e}")
-        else:
-            return
+        PyCookieCloud.increase_cookie_lifetime(1200)
+        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                context = browser.new_context()
+                cookie = self.get_cookie()
+                if cookie:
+                    context.add_cookies(cookie)
+                page = context.new_page()
+                page.goto(self._wechatUrl)
+                time.sleep(3)
+                if not self.check_login_status(page, task='refresh_cookie'):
+                    logger.info("cookie已失效，下次IP变动推送二维码")
+                browser.close()
+        except Exception as e:
+            logger.error(f"cookie校验失败:{e}")
 
     #
     def check_login_status(self, page, task):
@@ -540,8 +533,8 @@ class Dydebug(_PluginBase):
         except Exception as e:
             # logger.debug(str(e))  # 基于bug运行，请不要将错误输出到日志
             # try:  # 没有登录成功，也没有短信验证码
-            if self.find_qrc(page) and not task == 'refresh_cookie':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
-                logger.error(f"用户没有扫描二维码")
+            if self.find_qrc(page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
+                logger.warning(f"用户没有扫描二维码")
                 return False
 
     def click_app_management_buttons(self, page):
@@ -676,7 +669,6 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            "cookie_lifetime": self._cookie_lifetime,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
         })
@@ -983,8 +975,6 @@ class Dydebug(_PluginBase):
 
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
-            # if self._cookie_lifetime > 0
-            # else "未刷新过Cookie"
         )
         cookie_lifetime_component = {
             "component": "div",
@@ -1149,5 +1139,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
 
