@@ -3,16 +3,17 @@ import json
 import requests
 import base64
 import hashlib
-
 from typing import Dict, Any
 from Crypto import Random
 from Crypto.Cipher import AES
+from app.log import logger
+
 
 
 # 获取当前脚本所在目录
 script_dir = os.path.dirname(os.path.abspath(__file__))
 settings_file = os.path.join(script_dir, 'settings.json')
-
+logger.info('配置文件: ', settings_file)
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
     # 兼容v2 将bytes_to_key和encrypt导入
