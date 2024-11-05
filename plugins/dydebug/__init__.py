@@ -676,7 +676,7 @@ class Dydebug(_PluginBase):
             "helloimg_s_token": self._helloimg_s_token,
             "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
-            # "cookie_lifetime": self._cookie_lifetime,
+            "cookie_lifetime": self._cookie_lifetime,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
         })
