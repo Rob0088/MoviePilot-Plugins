@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.7.5"
+    plugin_version = "0.8.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -116,7 +116,6 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
 
         # 停止现有任务
         self.stop_service()
@@ -214,10 +213,6 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
-        #     logger.info("收到命令，开始检测公网IP ...")
-        #     self.post_message(channel=event.event_data.get("channel"),
-        #                       title="开始检测公网IP ...",
-        #                       userid=event.event_data.get("user"))
 
         logger.info("开始检测公网IP")
         if self.CheckIP():
@@ -470,8 +465,6 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        PyCookieCloud.increase_cookie_lifetime(1200)
-        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
@@ -484,6 +477,10 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     logger.info("cookie已失效，下次IP变动推送二维码")
+                    # PyCookieCloud.save_cookie_lifetime(0) 
+                else:
+                    PyCookieCloud.increase_cookie_lifetime(1200)
+                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
                 browser.close()
         except Exception as e:
             logger.error(f"cookie校验失败:{e}")
@@ -582,7 +579,7 @@ class Dydebug(_PluginBase):
                     self.post_message(
                         mtype=NotificationType.Plugin,
                         title="更新可信IP成功",
-                        text='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                        text='应用: ' + app_id + ' 输入IP：' + masked_ip
                         # image=img_src
                     )
             return
@@ -1140,4 +1137,3 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
