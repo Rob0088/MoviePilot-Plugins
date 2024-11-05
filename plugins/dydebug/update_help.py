@@ -8,12 +8,10 @@ from Crypto import Random
 from Crypto.Cipher import AES
 from app.log import logger
 
-
-
 # 获取当前脚本所在目录
 script_dir = os.path.dirname(os.path.abspath(__file__))
 settings_file = os.path.join(script_dir, 'settings.json')
-logger.info('配置文件: ', settings_file)
+
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
     # 兼容v2 将bytes_to_key和encrypt导入
@@ -91,6 +89,7 @@ class PyCookieCloud:
 
     @staticmethod
     def load_cookie_lifetime():    # 返回时间戳 单位秒
+        logger.info('配置文件: ', settings_file)
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
