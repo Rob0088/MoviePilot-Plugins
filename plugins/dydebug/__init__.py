@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.2"
+    plugin_version = "0.9.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -427,19 +427,19 @@ class Dydebug(_PluginBase):
                         return
                     
                     # 初始化 formatted_cookies 字典
-                    # formatted_cookies = {}
-                    # for cookie in current_cookies:
-                    #     domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
-                    #     if domain is None:
-                    #         continue  # 跳过没有 domain 的 cookie
+                    formatted_cookies = {}
+                    for cookie in current_cookies:
+                        domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
+                        if domain is None:
+                            continue  # 跳过没有 domain 的 cookie
 
-                    #     if domain not in formatted_cookies:
-                    #         formatted_cookies[domain] = []
-                    #     formatted_cookies[domain].append(cookie)
-                    if current_cookies['.work.weixin.qq.com']:
-                        current_cookies['.work.weixin.qq.com'] += ";_upload_type=A"
-                    logger.info({'cookie_data': current_cookies})
-                    flag = self._cc_server.update_cookie({'cookie_data': current_cookies})
+                        if domain not in formatted_cookies:
+                            formatted_cookies[domain] = []
+                        formatted_cookies[domain].append(cookie)
+                    if formatted_cookies['.work.weixin.qq.com']:
+                        formatted_cookies['.work.weixin.qq.com'] += ";_upload_type=A"
+                    logger.info({'cookie_data': formatted_cookies})
+                    flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
                     else:
