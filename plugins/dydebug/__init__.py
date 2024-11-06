@@ -426,7 +426,7 @@ class Dydebug(_PluginBase):
                     if current_cookies is None:
                         logger.error("无法获取当前 cookies")
                         return
-
+                    logger.info("返回的cookie", formatted_cookies)
                     formatted_cookies = {}
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
