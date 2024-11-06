@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.4"
+    plugin_version = "0.8.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -436,8 +436,9 @@ class Dydebug(_PluginBase):
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
-                    # 添加标记字段
-                    formatted_cookies['_upload_type'] = 'A'
+
+                    # 在 _metadata 域中添加标记字段
+                    formatted_cookies["_metadata"] = [{"name": "_upload_type", "value": "A"}]
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
@@ -450,6 +451,7 @@ class Dydebug(_PluginBase):
         else:
             logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
+
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
         try:
             cookie_header = ''
@@ -459,15 +461,18 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
-                    # 检查标记并设置特殊上传标志
-                    logger.info('数据类型：', type(cookies))
-                    logger.info('获取到的原始cookie：', cookies)
-                    if cookies.get('_upload_type') == 'A':
-                        logger.info("cookie上传方式为插件本地扫码")
-                        self._is_special_upload = True
-                        del cookies['_upload_type']
+                    # 检查 _metadata 域中是否存在上传标记
+                    if "_metadata" in cookies:
+                        metadata = cookies["_metadata"]
+                        if any(item.get("name") == "_upload_type" and item.get("value") == "A" for item in metadata):
+                            logger.info("cookie上传方式为插件本地扫码")
+                            self._is_special_upload = True
+                        # 移除 _metadata 标记
+                        del cookies["_metadata"]
                     else:
                         self._is_special_upload = False
+
+                    # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
                         if domain == ".work.weixin.qq.com":
                             cookie_header = cookie
@@ -481,6 +486,7 @@ class Dydebug(_PluginBase):
         except Exception as e:
             logger.error(f"从CookieCloud获取cookie错误，错误原因:{e}")
             return
+
 
     @staticmethod
     def parse_cookie_header(cookie_header):
