@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.3"
+    plugin_version = "0.9.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -437,6 +437,7 @@ class Dydebug(_PluginBase):
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
                     if formatted_cookies['.work.weixin.qq.com']:
+                        logger.info({'formatted_cookies': formatted_cookies['.work.weixin.qq.com']})
                         formatted_cookies['.work.weixin.qq.com'] += ";_upload_type=A"
                     logger.info({'cookie_data': formatted_cookies})
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
