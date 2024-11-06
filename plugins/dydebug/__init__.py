@@ -469,16 +469,16 @@ class Dydebug(_PluginBase):
                     return
                 else:
                     logger.info(f"获取到的原始cookie: {cookies}")
-                    # 检查是否存在空字符串键，处理上传标记
+                # 检查是否存在空字符串键，处理上传标记
                     if '' in cookies:
                         metadata = cookies['']
-                        # 如果 '_upload_type' 标记为 'A'
-                        if 'name' in metadata and metadata['name'] == '_upload_type' and metadata['value'] == 'A':
+                        # 检查上传标记
+                        if metadata == "_upload_type=A":
                             logger.info("cookie上传方式为插件本地扫码")
                             self._is_special_upload = True
                         # 移除空字符串键的标记
                         del cookies['']
-                        logger.info(f"移除 _metadata 后的cookie", {cookies})
+                        logger.info("移除 _metadata 后的cookie", cookies)
 
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
