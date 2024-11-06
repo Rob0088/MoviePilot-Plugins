@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.8"
+    plugin_version = "0.8.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -468,7 +468,7 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
-                    logger.info("获取到的原始cookie", cookies)
+                    logger.info(f"获取到的原始cookie: {cookies}")
                     # 检查 _metadata 域中是否存在上传标记
                     if "_metadata" in cookies:
                         metadata = cookies["_metadata"]
@@ -477,7 +477,7 @@ class Dydebug(_PluginBase):
                             self._is_special_upload = True
                         # 移除 _metadata 标记
                         del cookies["_metadata"]
-                        logger.info("获取到的处理后的cookie", cookies)
+                        logger.info(f"移除 _metadata处理后的cookie: {cookies}")
                     else:
                         logger.info("cookie上传方式为浏览器插件")
                         self._is_special_upload = False
