@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.7"
+    plugin_version = "0.8.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -410,7 +410,6 @@ class Dydebug(_PluginBase):
         finally:
             pass
 
-    # 上传方式
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
         PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
@@ -426,8 +425,11 @@ class Dydebug(_PluginBase):
                     if current_cookies is None:
                         logger.error("无法获取当前 cookies")
                         return
-                    logger.info("返回的cookie", formatted_cookies)
+                    
+                    # 初始化 formatted_cookies 字典
                     formatted_cookies = {}
+                    logger.info("返回的 cookie 初始值: %s", formatted_cookies)
+
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
                         if domain is None:
@@ -436,10 +438,13 @@ class Dydebug(_PluginBase):
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
-                    logger.info("原始cookie", formatted_cookies)
+                    
+                    logger.info("原始cookie: %s", formatted_cookies)
+
                     # 在 _metadata 域中添加标记字段
                     formatted_cookies["_metadata"] = [{"name": "_upload_type", "value": "A"}]
-                    logger.info("格式化cookie", formatted_cookies)
+                    logger.info("格式化后的 cookie: %s", formatted_cookies)
+
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
@@ -451,6 +456,7 @@ class Dydebug(_PluginBase):
                 logger.error(f"更新 cookie 发生错误: {e}")
         else:
             logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
+
 
 
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
