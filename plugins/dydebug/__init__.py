@@ -428,8 +428,6 @@ class Dydebug(_PluginBase):
                     
                     # 初始化 formatted_cookies 字典
                     formatted_cookies = {}
-                    # logger.info("返回的 cookie 初始值: %s", formatted_cookies)
-
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
                         if domain is None:
@@ -438,13 +436,9 @@ class Dydebug(_PluginBase):
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
-                    
-                    # logger.info("原始cookie: %s", formatted_cookies)
-
-                    # 在 _metadata 域中添加标记字段
-                    formatted_cookies["_metadata"] = [{"name": "_upload_type", "value": "A"}]
-                    # logger.info("格式化后的 cookie: %s", formatted_cookies)
-
+                        if '.work.weixin.qq.com' in cookie:
+                            cook['.work.weixin.qq.com'] += ";_upload_type=A"
+                
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
@@ -468,22 +462,26 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
-                    # logger.info(f"获取到的原始cookie: {cookies}")
-                    
-                    for domain, cookie_str in cookies.items():
-                        if "_upload_type=A" in cookie_str and domain == ".work.weixin.qq.com":
-                            logger.info("cookie上传本地扫码")
-                            self._is_special_upload = True
-                            del cookies[domain]
-                            break
-                        else:
-                            logger.info("浏览器插件")
-                            self._is_special_upload = False
+                    # for domain, cookie_str in cookies.items():
+                    #     if "_upload_type=A" in cookie_str and domain == ".work.weixin.qq.com":
+                    #         logger.info("cookie上传本地扫码")
+                    #         self._is_special_upload = True
+                    #         del cookies[domain]
+                    #         break
+                    #     else:
+                    #         logger.info("浏览器插件")
+                    #         self._is_special_upload = False
 
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
                         if domain == ".work.weixin.qq.com":
                             cookie_header = cookie
+                            if '_upload_type=A' in cookie:
+                                logger.info("cookie上传本地扫码")
+                                self._is_special_upload = True
+                            else:
+                                logger.info("浏览器插件")
+                                self._is_special_upload = False
                             break
                     if cookie_header == '':
                         cookie_header = self._cookie_header
