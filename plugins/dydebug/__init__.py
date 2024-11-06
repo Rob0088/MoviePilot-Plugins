@@ -439,7 +439,7 @@ class Dydebug(_PluginBase):
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
                     
-                    logger.info("原始cookie: %s", formatted_cookies)
+                    # logger.info("原始cookie: %s", formatted_cookies)
 
                     # 在 _metadata 域中添加标记字段
                     formatted_cookies["_metadata"] = [{"name": "_upload_type", "value": "A"}]
