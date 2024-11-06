@@ -66,7 +66,7 @@ class Dydebug(_PluginBase):
     # 企业微信登录
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
     # 检测间隔时间,默认10分钟
-    _refresh_cron = '*/20 * * * *'
+    _refresh_cron = '*/10 * * * *'
     # 输入的企业应用id
     _input_id_list = ''
     # helloimg的token
