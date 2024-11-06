@@ -428,7 +428,7 @@ class Dydebug(_PluginBase):
                     
                     # 初始化 formatted_cookies 字典
                     formatted_cookies = {}
-                    logger.info("返回的 cookie 初始值: %s", formatted_cookies)
+                    # logger.info("返回的 cookie 初始值: %s", formatted_cookies)
 
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
@@ -443,7 +443,7 @@ class Dydebug(_PluginBase):
 
                     # 在 _metadata 域中添加标记字段
                     formatted_cookies["_metadata"] = [{"name": "_upload_type", "value": "A"}]
-                    logger.info("格式化后的 cookie: %s", formatted_cookies)
+                    # logger.info("格式化后的 cookie: %s", formatted_cookies)
 
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
@@ -468,13 +468,12 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
-                    logger.info(f"获取到的原始cookie: {cookies}")
+                    # logger.info(f"获取到的原始cookie: {cookies}")
                     
                     for domain, cookie_str in cookies.items():
-                        if "_upload_type=A" in cookie_str:
-                            logger.info("cookie上传方式为插件本地扫码")
+                        if "_upload_type=A" in cookie_str and domain == ".work.weixin.qq.com":
+                            logger.info("cookie上传本地扫码")
                             self._is_special_upload = True
-                            # 删除该标记
                             del cookies[domain]
                             break
                         else:
