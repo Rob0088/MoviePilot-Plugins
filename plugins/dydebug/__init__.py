@@ -526,6 +526,7 @@ class Dydebug(_PluginBase):
                     self._cookie_valid = False
                     logger.info("cookie已失效，下次IP变动推送二维码")
                 else:
+                    self._cookie_valid = True
                     PyCookieCloud.increase_cookie_lifetime(1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
                 browser.close()
