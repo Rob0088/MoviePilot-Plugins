@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.2"
+    plugin_version = "0.8.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -459,9 +459,11 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
+                    # 检查标记并设置特殊上传标志
                     if cookies.get('_upload_type') == 'A':
                         logger.info("cookie上传方式为插件本地扫码")
                         self._is_special_upload = True
+                        del cookies['_upload_type']
                     else:
                         self._is_special_upload = False
                     for domain, cookie in cookies.items():
