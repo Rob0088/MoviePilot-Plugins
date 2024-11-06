@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.0"
+    plugin_version = "0.8.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -80,7 +80,8 @@ class Dydebug(_PluginBase):
     _future_timestamp = 0
 
     # cookie有效检测
-    # _cookie_valid = False
+    _cookie_valid = True
+    # cookie存活时间
     _cookie_lifetime = 0
     # 使用CookieCloud开关
     _use_cookiecloud = True
@@ -123,13 +124,19 @@ class Dydebug(_PluginBase):
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
             # 运行一次定时服务
-            if self._onlyonce or self._forced_update:
+            if self._onlyonce:
                 logger.info("立即检测公网IP")
                 self._scheduler.add_job(func=self.check, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                         name="检测公网IP")  # 添加任务
                 # 关闭一次性开关
                 self._onlyonce = False
+
+            if self._forced_update:
+                self._scheduler.add_job(func=self.forced_change, trigger='date',
+                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                        name="强制更新公网IP")  # 添加任务
+                self._forced_update = False
 
             if self._local_scan:
                 self._scheduler.add_job(func=self.local_scanning, trigger='date',
@@ -150,10 +157,21 @@ class Dydebug(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
-                if self._forced_update:
-                    time.sleep(4)
-                    self._forced_update = False
         self.__update_config()
+
+    @eventmanager.register(EventType.PluginAction)
+    def forced_change(self, event: Event = None):
+        """
+        强制修改IP
+        """
+        if not self._enabled:
+            logger.error("插件未开启")
+            return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "dynamicwechat":
+                return
+        self.ChangeIP()
 
     @eventmanager.register(EventType.PluginAction)
     def local_scanning(self, event: Event = None):
@@ -192,7 +210,7 @@ class Dydebug(_PluginBase):
                             self.click_app_management_buttons(page)
                             break
                     else:
-                        logger.info("用户可能没有扫码或登录失败，任务结束")
+                        logger.info("用户可能没有扫码或登录失败")
                 else:
                     logger.error("未找到二维码，任务结束")
                 logger.info("----------------------本次任务结束----------------------")
@@ -476,6 +494,7 @@ class Dydebug(_PluginBase):
                 page.goto(self._wechatUrl)
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
+                    self._cookie_valid = False
                     logger.info("cookie已失效，下次IP变动推送二维码")
                 else:
                     PyCookieCloud.increase_cookie_lifetime(1200)
@@ -578,7 +597,7 @@ class Dydebug(_PluginBase):
                     self.post_message(
                         mtype=NotificationType.Plugin,
                         title="更新可信IP成功",
-                        text='应用: ' + app_id + ' 输入IP：' + masked_ip
+                        text='应用: ' + app_id + ' 输入IP：' + masked_ip,
                         # image=img_src
                     )
             return
@@ -969,7 +988,10 @@ class Dydebug(_PluginBase):
         cookie_lifetime_days = self._cookie_lifetime // 86400  # 一天的秒数为 86400
         cookie_lifetime_hours = (self._cookie_lifetime % 86400) // 3600  # 计算小时数
         cookie_lifetime_minutes = (self._cookie_lifetime % 3600) // 60  # 计算分钟数
-
+        if self._cookie_valid:
+            bg_color = "#40bb45"
+        else:
+            bg_color = "#ff0000"
         cookie_lifetime_text = (
             f"Cookie 已使用: {cookie_lifetime_days}天{cookie_lifetime_hours}小时{cookie_lifetime_minutes}分钟"
         )
@@ -980,7 +1002,7 @@ class Dydebug(_PluginBase):
                 "style": {
                     "fontSize": "18px",
                     "color": "#ffffff",  # 白色字体
-                    "backgroundColor": "#4CAF50",  # 更深的绿色背景
+                    "backgroundColor": bg_color,  # 更深的绿色背景
                     "padding": "10px",
                     "borderRadius": "5px",
                     "textAlign": "center",
@@ -1136,6 +1158,7 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
 
 
 
