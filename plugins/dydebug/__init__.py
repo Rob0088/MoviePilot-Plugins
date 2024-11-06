@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.12"
+    plugin_version = "0.8.13"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -469,16 +469,17 @@ class Dydebug(_PluginBase):
                     return
                 else:
                     logger.info(f"获取到的原始cookie: {cookies}")
-                # 检查是否存在空字符串键，处理上传标记
-                    if '' in cookies:
-                        metadata = cookies['']
-                        # 检查上传标记
-                        if metadata == "_upload_type=A":
+                    
+                    for domain, cookie_str in cookies.items():
+                        if "_upload_type=A" in cookie_str:
                             logger.info("cookie上传方式为插件本地扫码")
                             self._is_special_upload = True
-                        # 移除空字符串键的标记
-                        del cookies['']
-                        logger.info(f"移除 _metadata 后的cookie", {cookies})
+                            # 删除该标记
+                            del cookies[domain]
+                            break
+                        else:
+                            logger.info("浏览器插件")
+                            self._is_special_upload = False
 
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
@@ -1049,27 +1050,41 @@ class Dydebug(_PluginBase):
                 "content": [
                     {
                         "component": "div",
-                        "text": vaild_text,
                         "props": {
                             "style": {
-                                "fontSize": "22px",
-                                "fontWeight": "bold",
-                                "color": "#ffffff",
-                                "backgroundColor": color,
-                                "padding": "8px",
-                                "borderRadius": "5px",
-                                "display": "block",
-                                "textAlign": "center",
-                                "marginBottom": "10px"
+                                "display": "flex",
+                                "justifyContent": "center",
+                                "alignItems": "center",
+                                "flexDirection": "column",  # 垂直排列
+                                "gap": "10px"  # 控制间距
                             }
-                        }
+                        },
+                        "content": [
+                            {
+                                "component": "div",
+                                "text": vaild_text,
+                                "props": {
+                                    "style": {
+                                        "fontSize": "22px",
+                                        "fontWeight": "bold",
+                                        "color": "#ffffff",
+                                        "backgroundColor": color,
+                                        "padding": "8px",
+                                        "borderRadius": "5px",
+                                        "textAlign": "center",
+                                        "marginBottom": "10px",
+                                        "display": "inline-block"
+                                    }
+                                }
+                            },
+                            cookie_lifetime_component if cookie_lifetime_component else {},
+                        ]
                     },
-                    cookie_lifetime_component if cookie_lifetime_component else {},
                     img_component  # 二维码图片或提示信息
                 ]
             }
         ]
-
+        
         return base_content
 
     @eventmanager.register(EventType.PluginAction)
