@@ -410,57 +410,57 @@ class Dydebug(_PluginBase):
         finally:
             pass
 
-def _update_cookie(self, page, context):
-    self._future_timestamp = 0  # 标记二维码失效
-    PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
-    if self._use_cookiecloud:
-        if not self._cc_server:  # 连接失败返回 False
-            self.try_connect_cc()  # 再尝试一次连接
-            if self._cc_server is None:
-                return
-        try:
-            if self._cc_server.check_connection():
-                current_url = page.url
-                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-                if current_cookies is None:
-                    logger.error("无法获取当前 cookies")
+    def _update_cookie(self, page, context):
+        self._future_timestamp = 0  # 标记二维码失效
+        PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
+        if self._use_cookiecloud:
+            if not self._cc_server:  # 连接失败返回 False
+                self.try_connect_cc()  # 再尝试一次连接
+                if self._cc_server is None:
                     return
-                
-                # 初始化 formatted_cookies 字典
-                formatted_cookies = {}
-                for cookie in current_cookies:
-                    domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
-                    if domain is None:
-                        continue  # 跳过没有 domain 的 cookie
-
-                    if domain not in formatted_cookies:
-                        formatted_cookies[domain] = []
-                    formatted_cookies[domain].append(cookie)
-                
-                if '.work.weixin.qq.com' not in formatted_cookies:
-                    formatted_cookies['.work.weixin.qq.com'] = []
-                formatted_cookies['.work.weixin.qq.com'].append({
-                    'name': '_upload_type',
-                    'value': 'A',
-                    'domain': '.work.weixin.qq.com',
-                    'path': '/',
-                    'expires': -1,
-                    'httpOnly': False,
-                    'secure': False,
-                    'sameSite': 'Lax'
-                })
-
-                flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
-                if flag:
-                    logger.info("更新 CookieCloud 成功")
+            try:
+                if self._cc_server.check_connection():
+                    current_url = page.url
+                    current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
+                    if current_cookies is None:
+                        logger.error("无法获取当前 cookies")
+                        return
+                    
+                    # 初始化 formatted_cookies 字典
+                    formatted_cookies = {}
+                    for cookie in current_cookies:
+                        domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
+                        if domain is None:
+                            continue  # 跳过没有 domain 的 cookie
+    
+                        if domain not in formatted_cookies:
+                            formatted_cookies[domain] = []
+                        formatted_cookies[domain].append(cookie)
+                    
+                    if '.work.weixin.qq.com' not in formatted_cookies:
+                        formatted_cookies['.work.weixin.qq.com'] = []
+                    formatted_cookies['.work.weixin.qq.com'].append({
+                        'name': '_upload_type',
+                        'value': 'A',
+                        'domain': '.work.weixin.qq.com',
+                        'path': '/',
+                        'expires': -1,
+                        'httpOnly': False,
+                        'secure': False,
+                        'sameSite': 'Lax'
+                    })
+    
+                    flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
+                    if flag:
+                        logger.info("更新 CookieCloud 成功")
+                    else:
+                        logger.error("更新 CookieCloud 失败")
                 else:
-                    logger.error("更新 CookieCloud 失败")
-            else:
-                logger.error("连接 CookieCloud 失败", self._server)
-        except Exception as e:
-            logger.error(f"更新 cookie 发生错误: {e}")
-    else:
-        logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
+                    logger.error("连接 CookieCloud 失败", self._server)
+            except Exception as e:
+                logger.error(f"更新 cookie 发生错误: {e}")
+        else:
+            logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
 
 
