@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.11"
+    plugin_version = "0.8.12"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -478,7 +478,7 @@ class Dydebug(_PluginBase):
                             self._is_special_upload = True
                         # 移除空字符串键的标记
                         del cookies['']
-                        logger.info("移除 _metadata 后的cookie", cookies)
+                        logger.info(f"移除 _metadata 后的cookie", {cookies})
 
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
