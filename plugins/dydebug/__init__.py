@@ -1031,7 +1031,7 @@ class Dydebug(_PluginBase):
                         "borderRadius": "5px",
                         "textAlign": "center",
                         "marginTop": "10px",
-                        "display": "inline-block"
+                        "display": "block"
                     }
                 }
             }
@@ -1058,7 +1058,7 @@ class Dydebug(_PluginBase):
                                 "backgroundColor": color,
                                 "padding": "8px",
                                 "borderRadius": "5px",
-                                "display": "inline-block",
+                                "display": "block",
                                 "textAlign": "center",
                                 "marginBottom": "10px"
                             }
