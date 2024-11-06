@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.9"
+    plugin_version = "0.8.10"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -469,18 +469,16 @@ class Dydebug(_PluginBase):
                     return
                 else:
                     logger.info(f"获取到的原始cookie: {cookies}")
-                    # 检查 _metadata 域中是否存在上传标记
-                    if "_metadata" in cookies:
-                        metadata = cookies["_metadata"]
-                        if any(item.get("name") == "_upload_type" and item.get("value") == "A" for item in metadata):
+                    # 检查是否存在空字符串键，处理上传标记
+                    if '' in cookies:
+                        metadata = cookies['']
+                        # 如果 '_upload_type' 标记为 'A'
+                        if 'name' in metadata and metadata['name'] == '_upload_type' and metadata['value'] == 'A':
                             logger.info("cookie上传方式为插件本地扫码")
                             self._is_special_upload = True
-                        # 移除 _metadata 标记
-                        del cookies["_metadata"]
-                        logger.info(f"移除 _metadata处理后的cookie: {cookies}")
-                    else:
-                        logger.info("cookie上传方式为浏览器插件")
-                        self._is_special_upload = False
+                        # 移除空字符串键的标记
+                        del cookies['']
+                        logger.info(f"移除 _metadata 后的cookie", {cookies})
 
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
