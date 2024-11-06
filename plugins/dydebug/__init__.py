@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.8.5"
+    plugin_version = "0.8.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -470,6 +470,7 @@ class Dydebug(_PluginBase):
                         # 移除 _metadata 标记
                         del cookies["_metadata"]
                     else:
+                        logger.info("cookie上传方式为浏览器插件")
                         self._is_special_upload = False
 
                     # 获取指定域名的 cookie
