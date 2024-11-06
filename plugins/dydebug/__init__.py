@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.0"
+    plugin_version = "0.9.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -66,7 +66,7 @@ class Dydebug(_PluginBase):
     # 企业微信登录
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
     # 检测间隔时间,默认10分钟
-    _refresh_cron = '*/10 * * * *'
+    _refresh_cron = '*/5 * * * *'
     # 输入的企业应用id
     _input_id_list = ''
     # helloimg的token
@@ -438,7 +438,7 @@ class Dydebug(_PluginBase):
                         formatted_cookies[domain].append(cookie)
                         if '.work.weixin.qq.com' in cookie:
                             cook['.work.weixin.qq.com'] += ";_upload_type=A"
-                
+                    logger.info({'cookie_data': formatted_cookies})
                     flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
                     if flag:
                         logger.info("更新 CookieCloud 成功")
@@ -471,10 +471,10 @@ class Dydebug(_PluginBase):
                     #     else:
                     #         logger.info("浏览器插件")
                     #         self._is_special_upload = False
-
                     # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
                         if domain == ".work.weixin.qq.com":
+                            logger.info({cookie})
                             cookie_header = cookie
                             if '_upload_type=A' in cookie:
                                 logger.info("cookie上传本地扫码")
