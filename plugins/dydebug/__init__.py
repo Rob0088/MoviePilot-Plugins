@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.7"
+    plugin_version = "0.9.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -425,8 +425,6 @@ class Dydebug(_PluginBase):
                     if current_cookies is None:
                         logger.error("无法获取当前 cookies")
                         return
-                    
-                    # 初始化 formatted_cookies 字典
                     formatted_cookies = {}
                     for cookie in current_cookies:
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
@@ -436,21 +434,7 @@ class Dydebug(_PluginBase):
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
-                    
-                    if '.work.weixin.qq.com' not in formatted_cookies:
-                        formatted_cookies['.work.weixin.qq.com'] = []
-                    formatted_cookies['.work.weixin.qq.com'].append({
-                        'name': '_upload_type',
-                        'value': 'A',
-                        'domain': '.work.weixin.qq.com',
-                        'path': '/',
-                        'expires': -1,
-                        'httpOnly': False,
-                        'secure': False,
-                        'sameSite': 'Lax'
-                    })
-    
-                    flag = self._cc_server.update_cookie({'cookie_data': formatted_cookies})
+                    flag = self._cc_server.update_cookie(formatted_cookies)
                     if flag:
                         logger.info("更新 CookieCloud 成功")
                     else:
