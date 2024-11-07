@@ -24,7 +24,7 @@ from app.schemas.types import EventType, NotificationType
 
 class Dydebug(_PluginBase):
     # 插件名称
-    plugin_name = "修改debug"
+    plugin_name = "假的修改debug"
     # 插件描述
     plugin_desc = "优先使用cookie，当填写两个第三方token时手机微信可以更新cookie。验证码以？结尾发给企业微信应用。如：110301？"
     # 插件图标
