@@ -827,7 +827,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'cron',
-                                            'label': '检测周期',
+                                            'label': '[必填]检测周期',
                                             'placeholder': '0 * * * *'
                                         }
                                     }
@@ -848,7 +848,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'input_id_list',
-                                            'label': '应用ID',
+                                            'label': '[必填]应用ID',
                                             'rows': 1,
                                             'placeholder': '输入应用ID，多个ID用英文逗号分隔。在企业微信应用页面URL末尾获取'
                                         }
@@ -871,7 +871,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'pushplus_token',
-                                            'label': 'pushplus_token',
+                                            'label': '[可选]pushplus_token',
                                             'rows': 1,
                                             'placeholder': '[可选] 请输入 pushplus_token'
                                         }
@@ -889,7 +889,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'helloimg_s_token',
-                                            'label': 'helloimg_s_token',
+                                            'label': '[可选]helloimg_s_token',
                                             'rows': 1,
                                             'placeholder': '[可选] 请输入 helloimg_token'
                                         }
