@@ -476,7 +476,7 @@ class Dydebug(_PluginBase):
                                 # logger.info("cookie上传本地扫码")
                                 self._is_special_upload = True
                             else:
-                                logger.info("浏览器插件")
+                                # logger.info("浏览器插件")
                                 self._is_special_upload = False
                             break
                     if cookie_header == '':
