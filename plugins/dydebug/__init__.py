@@ -395,6 +395,7 @@ class Dydebug(_PluginBase):
                         else:
                             self._ip_changed = False
                     else:
+                        self._ip_changed = False
                         logger.info("cookie失效，请重新上传或者配置pushplus_token和helloimg_s_token。")
                 else:  # 如果直接进入企业微信
                     logger.info("尝试cookie登录")
@@ -405,7 +406,7 @@ class Dydebug(_PluginBase):
                     else:
                         # ----------cookie END-----------------
                         self._ip_changed = False
-                        return
+                        # return
                 browser.close()
 
         except Exception as e:
