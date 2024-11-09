@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.10"
+    plugin_version = "0.9.11"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -105,10 +105,11 @@ class Dydebug(_PluginBase):
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
-        self._current_ip_address = self.get_ip_from_url(self._ip_urls[0])
+        self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         dir = self.get_data_path()
-        logger.info("插件数据保存目录", dir)
+        logger.info(f"插件数据保存目录: {dir}")
+
         if config:
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
