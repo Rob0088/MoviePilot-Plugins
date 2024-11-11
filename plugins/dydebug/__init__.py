@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.13"
+    plugin_version = "1.0.14"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -123,8 +123,8 @@ class Dydebug(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
-            self._pushplus_token = config.get("pushplus_token")
-            self._helloimg_s_token = config.get("helloimg_s_token")
+            # self._pushplus_token = config.get("pushplus_token")
+            # self._helloimg_s_token = config.get("helloimg_s_token")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
