@@ -361,16 +361,15 @@ class Dydebug(_PluginBase):
         if self._use_wechat and self._ip_changed:    # 优先使用微信且上次IP修改成功
             # logger.info("使用微信通知")
             if 'https' in img_src:  # 是二维码
-                self.post_message(
-                    mtype=NotificationType.Plugin,
+                WeChat.send_msg(
                     title='企业微信登录二维码',
                     text=f"二维码刷新时间：{title}",
-                    image=img_src
+                    image=img_src,
+                    link=img_src
                 )
             else:
                 if not self._msg_sent:  # 第一次发送通知
-                    self.post_message(
-                        mtype=NotificationType.Plugin,
+                    WeChat.send_msg(
                         title=title,
                         text=f"{img_src}",
                         # image=img_src
@@ -859,7 +858,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'use_wechat',
-                                            'label': '企微应用接收消息',
+                                            'label': '优先企微应用接收消息',
                                         }
                                     }
                                 ]
@@ -1210,3 +1209,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
