@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -725,8 +725,8 @@ class Dydebug(_PluginBase):
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "use_wechat": self._use_wechat,
-            "cookie_valid": self._cookie_valid,
-            "msg_sended": self._msg_sended,
+            # "cookie_valid": self._cookie_valid,
+            # "msg_sended": self._msg_sended,
             "current_ip_address": self._current_ip_address,
             "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
