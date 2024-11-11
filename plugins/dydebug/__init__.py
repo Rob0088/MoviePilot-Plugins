@@ -19,6 +19,7 @@ from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.plugins.dydebug.update_help import PyCookieCloud
+from app.plugins.dydebug.notify_helper import MySender
 from app.schemas.types import EventType, NotificationType
 from app.modules.wechat.wechat import WeChat
 
