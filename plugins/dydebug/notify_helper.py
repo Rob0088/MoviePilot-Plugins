@@ -54,14 +54,14 @@ class MySender:
     def send_wechat(self, title, content, contains_image):
         # WeChat发送逻辑
         if contains_image:
-            WeChat.send_msg(
+            WeChat().send_msg(
                 title='企业微信登录二维码',
                 text=f"二维码刷新时间：{content}",
                 image=contains_image,
                 link=contains_image
             )
         else:
-            WeChat.send_msg(
+            WeChat().send_msg(
                 title=title,
                 text=f"{content}",
             )
