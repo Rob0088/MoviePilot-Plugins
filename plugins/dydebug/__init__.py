@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.8"
+    plugin_version = "1.0.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -59,7 +59,7 @@ class Dydebug(_PluginBase):
     # 希望使用微信
     _use_wechat = False
     # 已发送cookie失效提醒
-    _msg_sent = True
+    _msg_sent = False
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -358,7 +358,6 @@ class Dydebug(_PluginBase):
             return None, None
 
     def send_message(self, title, img_src):
-        notification_flag = False
         if self._use_wechat and self._ip_changed:    # 优先使用微信且上次IP修改成功
             logger.info("使用微信通知")
             if 'https' in img_src:  # 是二维码
@@ -369,13 +368,14 @@ class Dydebug(_PluginBase):
                     image=img_src
                 )
             else:
-                self.post_message(
-                    mtype=NotificationType.Plugin,
-                    title=title,
-                    text=f"{img_src}",
-                    # image=img_src
-                )
-                notification_flag = True
+                if not self._msg_sent:  # 第一次发送通知
+                    self.post_message(
+                        mtype=NotificationType.Plugin,
+                        title=title,
+                        text=f"{img_src}",
+                        # image=img_src
+                    )
+                    self._msg_sent = True
         elif self._notification_token:
             logger.info("使用第三方通知")
             letters_only = ''.join(re.findall(r'[A-Za-z]', self._notification_token))
@@ -397,12 +397,15 @@ class Dydebug(_PluginBase):
                         "template": "html"
                     }
                 else:
-                    pushplus_data = {
-                        "title": title,
-                        "content": f"{img_src}",
-                        "template": "html"
-                    }
-                    notification_flag = True
+                    if not self._msg_sent:  # 第一次发送通知
+                        pushplus_data = {
+                            "title": title,
+                            "content": f"{img_src}",
+                            "template": "html"
+                        }
+                        self._msg_sent = True
+                    else:
+                        return
                 response = requests.post(pushplus_url, json=pushplus_data)
                 result = response.json()
             elif push_type == "ServerChan":
@@ -423,12 +426,15 @@ class Dydebug(_PluginBase):
                         # **options
                     }
                 else:
-                    params = {
-                        'title': title,
-                        'desp': f'{img_src}',
-                        # **options
-                    }
-                    notification_flag = True
+                    if not self._msg_sent:  # 第一次发送通知
+                        params = {
+                            'title': title,
+                            'desp': f'{img_src}',
+                            # **options
+                        }
+                        self._msg_sent = True
+                    else:
+                        return
                 headers = {
                     'Content-Type': 'application/json;charset=utf-8'
                 }
@@ -451,12 +457,15 @@ class Dydebug(_PluginBase):
                         "channel": channel
                     }
                 else:
-                    payload = {
-                        "title": title,
-                        "content": f"{img_src}",
-                        "channel": channel
-                    }
-                    notification_flag = True
+                    if not self._msg_sent:  # 第一次发送通知
+                        payload = {
+                            "title": title,
+                            "content": f"{img_src}",
+                            "channel": channel
+                        }
+                        self._msg_sent = True
+                    else:
+                        return
                 headers = {
                     "Content-Type": "application/x-www-form-urlencoded"
                 }
@@ -464,7 +473,7 @@ class Dydebug(_PluginBase):
                 result = response.json()
         else:
             logger.warning("没有可用的通知方式，当可信IP已与网络出口IP不一致时微信也不可用。")
-        return notification_flag
+        # return notification_flag
 
     def ChangeIP(self, task=None):
         logger.info(f'消息发送状态:{self._msg_sent}, 进入函数:{task}')
@@ -605,13 +614,9 @@ class Dydebug(_PluginBase):
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
                     logger.warning("cookie已失效，发送一次通知")
-                    if not self._msg_sent:
-                        msg_flag = self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
-                        if msg_flag:
-                            self._msg_sent = True  # 标记消息已发送
+                    self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
                 else:
                     self._cookie_valid = True
-                    self._msg_sent = False   # 标记消息未发送
                     PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
