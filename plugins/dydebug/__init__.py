@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.11"
+    plugin_version = "0.9.12"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -341,13 +341,14 @@ class Dydebug(_PluginBase):
 
                 qr_code_data = requests.get(qr_code_url).content
                 self._qr_code_image = io.BytesIO(qr_code_data)
-                return True
+                logger.info("找到二维码图片", qr_code_url)
+                return qr_code_data
             else:
                 logger.warning("未找到二维码")
-                return False
+                return None
         except Exception as e:
             logger.debug(str(e))
-            return False
+            return None
 
     def send_pushplus_message(self, title, content):
         pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
