@@ -358,7 +358,9 @@ class Dydebug(_PluginBase):
             return None, None
 
     def send_message(self, title, img_src):
+        notification_flag = False
         if self._use_wechat and self._ip_changed:    # 优先使用微信且上次IP修改成功
+            logger.info("使用微信通知")
             if 'https' in img_src:  # 是二维码
                 self.post_message(
                     mtype=NotificationType.Plugin,
@@ -373,16 +375,19 @@ class Dydebug(_PluginBase):
                     text=f"{img_src}",
                     # image=img_src
                 )
+                notification_flag = True
         elif self._notification_token:
+            logger.info("使用第三方通知")
             letters_only = ''.join(re.findall(r'[A-Za-z]', self._notification_token))
+            # 判断推送类型
             if self._notification_token.startswith("SCT"):
                 push_type = "ServerChan"
             elif letters_only.isupper():
                 push_type = "Anpush"
             else:
                 push_type = "pushplus"
-    
-           # 判断推送类型
+
+
             if push_type == "pushplus":
                 pushplus_url = f"http://www.pushplus.plus/send/{self._notification_token}"
                 if 'https' in img_src:
@@ -397,6 +402,7 @@ class Dydebug(_PluginBase):
                         "content": f"{img_src}",
                         "template": "html"
                     }
+                    notification_flag = True
                 response = requests.post(pushplus_url, json=pushplus_data)
                 result = response.json()
             elif push_type == "ServerChan":
@@ -422,6 +428,7 @@ class Dydebug(_PluginBase):
                         'desp': f'{img_src}',
                         # **options
                     }
+                    notification_flag = True
                 headers = {
                     'Content-Type': 'application/json;charset=utf-8'
                 }
@@ -435,7 +442,7 @@ class Dydebug(_PluginBase):
                 else:
                     logger.error("Anpush 必须包含通知频道，格式应为 '频道,token'")
                     raise ValueError("Anpush 必须包含通知频道，格式应为 '频道,token'")
-    
+
                 url = f"https://api.anpush.com/push/{token}"
                 if 'https' in img_src:
                     payload = {
@@ -449,13 +456,15 @@ class Dydebug(_PluginBase):
                         "content": f"{img_src}",
                         "channel": channel
                     }
+                    notification_flag = True
                 headers = {
                     "Content-Type": "application/x-www-form-urlencoded"
                 }
                 response = requests.post(url, headers=headers, data=payload)
                 result = response.json()
         else:
-            logger.warning("没有启用企微接收二维码或可信IP已与网络出口IP不一致。未配置第三方推送通知")
+            logger.warning("没有可用的通知方式，当可信IP已与网络出口IP不一致时微信也不可用。")
+        return notification_flag
 
     def ChangeIP(self, task=None):
         logger.info(f'消息发送状态:{self._msg_sent}, 进入函数:{task}')
@@ -597,8 +606,9 @@ class Dydebug(_PluginBase):
                     self._cookie_valid = False
                     logger.warning("cookie已失效，发送一次通知")
                     if not self._msg_sent:
-                        self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
-                        self._msg_sent = True  # 标记消息已发送
+                        msg_flag = self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
+                        if msg_flag:
+                            self._msg_sent = True  # 标记消息已发送
                 else:
                     self._cookie_valid = True
                     self._msg_sent = False   # 标记消息未发送
@@ -843,7 +853,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'use_wechat',
-                                            'label': '企微应用接收二维码',
+                                            'label': '企微应用接收消息',
                                         }
                                     }
                                 ]
