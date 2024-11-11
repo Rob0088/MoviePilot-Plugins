@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -440,6 +440,7 @@ class Dydebug(_PluginBase):
             result = response.json()
 
     def ChangeIP(self, task=None):
+        logger.info(f'self._msg_sent:{self._msg_sent},task:{task}')
         if not self._msg_sent or task == "forced_change":  # 没发过通知
             logger.info("开始请求企业微信管理更改可信IP")
             try:
@@ -724,10 +725,10 @@ class Dydebug(_PluginBase):
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "use_wechat": self._use_wechat,
-            # "cookie_valid": self._cookie_valid,
-            #
-            # "current_ip_address": self._current_ip_address,
-            # "ip_changed": self._ip_changed,
+            "cookie_valid": self._cookie_valid,
+            "msg_sended": self._msg_sended,
+            "current_ip_address": self._current_ip_address,
+            "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
             # "helloimg_s_token": self._helloimg_s_token,
