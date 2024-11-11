@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "0.9.13"
+    plugin_version = "1.0.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -56,6 +56,10 @@ class Dydebug(_PluginBase):
     _local_scan = False
     # 类初始化时添加标记变量
     _is_special_upload = False
+    # 希望使用微信
+    _use_wechat = False
+    # 已发送cookie失效提醒
+    _msg_sent = True
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -70,9 +74,9 @@ class Dydebug(_PluginBase):
     # 输入的企业应用id
     _input_id_list = ''
     # helloimg的token
-    _helloimg_s_token = ""
+    # _helloimg_s_token = ""
     # pushplus的token
-    _pushplus_token = ""
+    _notification_token = ""
     # 二维码
     _qr_code_image = None
     text = ""
@@ -80,6 +84,8 @@ class Dydebug(_PluginBase):
     _verification_code = ''
     # 过期时间
     _future_timestamp = 0
+    # 配置文件
+    _settings_file_path = None
 
     # cookie有效检测
     _cookie_valid = True
@@ -97,32 +103,33 @@ class Dydebug(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         # 清空配置
-        self._helloimg_s_token = ''
-        self._pushplus_token = ''
+        # self._helloimg_s_token = ''
+        self._notification_token = ''
         self._ip_changed = True
         self._forced_update = False
         self._use_cookiecloud = True
         self._local_scan = False
+        self._use_wechat = False
         self._input_id_list = ''
         self._cookie_header = ""
         self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
-        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
-        dir = self.get_data_path()
-        logger.info(f"插件数据保存目录: {dir}")
-
+        self._settings_file_path = self.get_data_path() / "settings.json"
         if config:
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
-            self._pushplus_token = config.get("pushplus_token")
-            self._helloimg_s_token = config.get("helloimg_s_token")
+            self._notification_token = config.get("notification_token")
+            # self._helloimg_s_token = config.get("helloimg_s_token")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
+            self._use_wechat = config.get("use_wechat")
+        if self._use_cookiecloud:
+            self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)   # 及时更新存活时间
 
         # 停止现有任务
         self.stop_service()
@@ -177,7 +184,7 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
-        self.ChangeIP()
+        self.ChangeIP(task='forced_change')
         self.__update_config()
         logger.info("----------------------本次任务结束----------------------")
 
@@ -242,7 +249,7 @@ class Dydebug(_PluginBase):
 
         logger.info("开始检测公网IP")
         if self.CheckIP():
-            self.ChangeIP()
+            self.ChangeIP(task="check")
             self.__update_config()
 
         # logger.info("检测公网IP完毕")
@@ -341,88 +348,176 @@ class Dydebug(_PluginBase):
 
                 qr_code_data = requests.get(qr_code_url).content
                 self._qr_code_image = io.BytesIO(qr_code_data)
-                logger.info(f"找到二维码图片 {qr_code_url}")
-                return qr_code_data
+                refuse_time = (datetime.now() + timedelta(seconds=115)).strftime("%Y-%m-%d %H:%M:%S")
+                return qr_code_url, refuse_time
             else:
                 logger.warning("未找到二维码")
-                return None
+                return None, None
         except Exception as e:
             logger.debug(str(e))
-            return None
+            return None, None
 
-    def send_pushplus_message(self, title, content):
-        pushplus_url = f"http://www.pushplus.plus/send/{self._pushplus_token}"
-        pushplus_data = {
-            "title": title,
-            "content": content,
-            "template": "html"
-        }
-        response = requests.post(pushplus_url, json=pushplus_data)
+    def send_message(self, title, img_src):
+        letters_only = ''.join(re.findall(r'[A-Za-z]', self._notification_token))
+        if self._notification_token.startswith("SCT"):
+            push_type = "ServerChan"
+        elif letters_only.isupper():
+            push_type = "Anpush"
+        else:
+            push_type = "pushplus"
 
+       # 判断推送类型
+        if push_type == "pushplus":
+            pushplus_url = f"http://www.pushplus.plus/send/{self._notification_token}"
+            if 'https' in img_src:
+                pushplus_data = {
+                    "title": title,
+                    "content": f"企业微信登录二维码<br/><img src='{img_src}' />",
+                    "template": "html"
+                }
+            else:
+                pushplus_data = {
+                    "title": title,
+                    "content": f"{img_src}",
+                    "template": "html"
+                }
+            response = requests.post(pushplus_url, json=pushplus_data)
+            result = response.json()
+        elif push_type == "ServerChan":
+            # 判断 sendkey 是否以 'sctp' 开头，并提取数字构造 URL
+            if self._notification_token.startswith('sctp'):
+                match = re.match(r'sctp(\d+)t', self._notification_token)
+                if match:
+                    num = match.group(1)
+                    url = f'https://{num}.push.ft07.com/send/{self._notification_token}.send'
+                else:
+                    raise ValueError('Invalid sendkey format for sctp')
+            else:
+                url = f'https://sctapi.ftqq.com/{self._notification_token}.send'
+            if 'https' in img_src:
+                params = {
+                    'title': title,
+                    'desp': f'![img]({img_src})',
+                    # **options
+                }
+            else:
+                params = {
+                    'title': title,
+                    'desp': f'{img_src}',
+                    # **options
+                }
+            headers = {
+                'Content-Type': 'application/json;charset=utf-8'
+            }
+            response = requests.post(url, json=params, headers=headers)
+            result = response.json()
+            # return result
+        elif push_type == "Anpush":
+            # 提取频道和 token
+            if ',' in self._notification_token:
+                channel, token = self._notification_token.split(',', 1)
+            else:
+                logger.error("Anpush 必须包含通知频道，格式应为 '频道,token'")
+                raise ValueError("Anpush 必须包含通知频道，格式应为 '频道,token'")
 
-    def ChangeIP(self):
-        logger.info("开始请求企业微信管理更改可信IP")
-        try:
-            with sync_playwright() as p:
-                # 启动 Chromium 浏览器并设置语言为中文
-                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                context = browser.new_context()
-                # ----------cookie addd-----------------
-                cookie = self.get_cookie()
-                if cookie:
-                    context.add_cookies(cookie)
-                # ----------cookie END-----------------
-                page = context.new_page()
-                page.goto(self._wechatUrl)
-                time.sleep(3)
-                if self.find_qrc(page):
-                    if self._pushplus_token and self._helloimg_s_token:
-                        img_src, refuse_time = self.upload_image(self._qr_code_image)
-                        self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
-                        # if img_src:
-                        #     self.post_message(
-                        #         mtype=NotificationType.Plugin,
-                        #         title="企业微信登录二维码",
-                        #         text=refuse_time,
-                        #         image=img_src
-                        #     )
-                        logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
-                        # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                        time.sleep(90)  # 等待用户扫码
-                        login_status = self.check_login_status(page, "")
-                        if login_status:
-                            self._update_cookie(page, context)  # 刷新cookie
-                            self.click_app_management_buttons(page)
+            url = f"https://api.anpush.com/push/{token}"
+            if 'https' in img_src:
+                payload = {
+                    "title": title,
+                    "content": f"<img src=\"{img_src}\" width=\"100%\">",
+                    "channel": channel
+                }
+            else:
+                payload = {
+                    "title": title,
+                    "content": f"{img_src}",
+                    "channel": channel
+                }
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+            response = requests.post(url, headers=headers, data=payload)
+            result = response.json()
+
+    def ChangeIP(self, task=None):
+        if not self._msg_sent or task == "forced_change":  # 没发过通知
+            logger.info("开始请求企业微信管理更改可信IP")
+            try:
+                with sync_playwright() as p:
+                    # 启动 Chromium 浏览器并设置语言为中文
+                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                    context = browser.new_context()
+                    # ----------cookie addd-----------------
+                    cookie = self.get_cookie()
+                    if cookie:
+                        context.add_cookies(cookie)
+                    # ----------cookie END-----------------
+                    page = context.new_page()
+                    page.goto(self._wechatUrl)
+                    time.sleep(3)
+                    img_src, refuse_time = self.find_qrc(page)
+                    if img_src:
+                        if self._use_wechat:
+                            if self._ip_changed:
+                                self.post_message(
+                                    mtype=NotificationType.Plugin,
+                                    title="企业微信登录二维码",
+                                    text=refuse_time,
+                                    image=img_src
+                                )
+                                logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
+                                # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                                time.sleep(90)  # 等待用户扫码
+                                login_status = self.check_login_status(page, "")
+                                if login_status:
+                                    self._update_cookie(page, context)  # 刷新cookie
+                                    self.click_app_management_buttons(page)
+                                else:
+                                    self._ip_changed = False
+                            else:
+                                logger.warning("因cookie失效，未及时更新可信IP，尝试第三方通知发送二维码")
+
+                        elif self._notification_token:
+                            self.send_message(refuse_time, img_src)
+                            logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
+                            # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                            time.sleep(90)  # 等待用户扫码
+                            login_status = self.check_login_status(page, "")
+                            if login_status:
+                                self._update_cookie(page, context)  # 刷新cookie
+                                self.click_app_management_buttons(page)
+                            else:
+                                self._ip_changed = False
                         else:
                             self._ip_changed = False
-                    else:
-                        self._ip_changed = False
-                        logger.info("cookie失效，请重新上传或者配置pushplus_token和helloimg_s_token。")
-                else:  # 如果直接进入企业微信
-                    logger.info("尝试cookie登录")
-                    # ----------cookie addd-----------------
-                    login_status = self.check_login_status(page, "")
-                    if login_status:
-                        self.click_app_management_buttons(page)
-                    else:
-                        # ----------cookie END-----------------
-                        self._ip_changed = False
-                        # return
-                browser.close()
+                            logger.warning("cookie失效，且使用第三方通知，不再尝试更改可信IP")
 
-        except Exception as e:
-            logger.error(f"更改可信IP失败: {e}")
-        finally:
-            pass
+                    else:  # 如果直接进入企业微信
+                        logger.info("尝试cookie登录")
+                        # ----------cookie addd-----------------
+                        login_status = self.check_login_status(page, "")
+                        if login_status:
+                            self.click_app_management_buttons(page)
+                        else:
+                            # ----------cookie END-----------------
+                            self._ip_changed = False
+                            # return
+                    browser.close()
+
+            except Exception as e:
+                logger.error(f"更改可信IP失败: {e}")
+            finally:
+                pass
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
-        PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
+        PyCookieCloud.save_cookie_lifetime(self._settings_file_path, 0)  # 重置cookie存活时间
         if self._use_cookiecloud:
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
                 if self._cc_server is None:
                     return
+            logger.info("使用二维码登录成功，开始刷新cookie")
             try:
                 if self._cc_server.check_connection():
                     current_url = page.url
@@ -435,7 +530,7 @@ class Dydebug(_PluginBase):
                         domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
                         if domain is None:
                             continue  # 跳过没有 domain 的 cookie
-    
+
                         if domain not in formatted_cookies:
                             formatted_cookies[domain] = []
                         formatted_cookies[domain].append(cookie)
@@ -451,9 +546,6 @@ class Dydebug(_PluginBase):
         else:
             logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
-
-
-
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
         try:
             cookie_header = ''
@@ -463,25 +555,12 @@ class Dydebug(_PluginBase):
                     logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                     return
                 else:
-                    # for domain, cookie_str in cookies.items():
-                    #     if "_upload_type=A" in cookie_str and domain == ".work.weixin.qq.com":
-                    #         logger.info("cookie上传本地扫码")
-                    #         self._is_special_upload = True
-                    #         del cookies[domain]
-                    #         break
-                    #     else:
-                    #         logger.info("浏览器插件")
-                    #         self._is_special_upload = False
-                    # 获取指定域名的 cookie
                     for domain, cookie in cookies.items():
                         if domain == ".work.weixin.qq.com":
-                            # logger.info({cookie})
                             cookie_header = cookie
                             if '_upload_type=A' in cookie:
-                                # logger.info("cookie上传本地扫码")
                                 self._is_special_upload = True
                             else:
-                                # logger.info("浏览器插件")
                                 self._is_special_upload = False
                             break
                     if cookie_header == '':
@@ -493,7 +572,6 @@ class Dydebug(_PluginBase):
         except Exception as e:
             logger.error(f"从CookieCloud获取cookie错误，错误原因:{e}")
             return
-
 
     @staticmethod
     def parse_cookie_header(cookie_header):
@@ -521,11 +599,15 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
-                    logger.info("cookie已失效，下次IP变动推送二维码")
+                    logger.warning("cookie已失效，发送一次通知")
+                    if self._msg_sent:
+                        self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
+                        self._msg_sent = False
                 else:
                     self._cookie_valid = True
-                    PyCookieCloud.increase_cookie_lifetime(1200)
-                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
+                    self._msg_sent = True
+                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
+                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
         except Exception as e:
             logger.error(f"cookie校验失败:{e}")
@@ -576,7 +658,8 @@ class Dydebug(_PluginBase):
         except Exception as e:
             # logger.debug(str(e))  # 基于bug运行，请不要将错误输出到日志
             # try:  # 没有登录成功，也没有短信验证码
-            if self.find_qrc(page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
+            if self.find_qrc(
+                    page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
                 logger.warning(f"用户没有扫描二维码")
                 return False
 
@@ -587,8 +670,8 @@ class Dydebug(_PluginBase):
             # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
             # ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
             (
-            "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
-            "配置")
+                "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
+                "配置")
         ]
         if self._input_id_list:
             id_list = self._input_id_list.split(",")
@@ -632,70 +715,6 @@ class Dydebug(_PluginBase):
             logger.error("未找到应用id，修改IP失败")
             return
 
-    def upload_image(self, file_obj, permission=1, strategy_id=1, album_id=1):
-        """
-        上传图片到 helloimg 图床，支持传入文件路径或 BytesIO 对象。
-
-        :param file_obj: 文件对象，可以是路径 (str) 或 BytesIO 对象
-        :param permission: 上传图片的权限设置，默认 1
-        :param strategy_id: 上传策略 ID，默认 1
-        :param album_id: 相册 ID，默认 1
-        :return: 上传成功返回图片链接，失败返回 None
-        """
-        helloimg_token = "Bearer " + self._helloimg_s_token
-        helloimg_url = "https://www.helloimg.com/api/v1/upload"
-        headers = {
-            "Authorization": helloimg_token,
-            "Accept": "application/json",
-        }
-
-        # 构造上传的文件，支持传入 BytesIO 或文件路径
-        if isinstance(file_obj, io.BytesIO):
-            # 如果是 BytesIO 对象，直接使用
-            files = {
-                "file": ('qr_code.png', file_obj, 'image/png')
-            }
-        else:
-            # 如果是文件路径，打开文件进行读取
-            files = {
-                "file": open(file_obj, "rb")
-            }
-
-        expired_at = (datetime.now() + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
-        helloimg_data = {
-            "token": "你的临时上传 Token",  # 确保这里的 token 是有效的
-            "permission": permission,
-            "strategy_id": strategy_id,
-            "album_id": album_id,
-            "expired_at": expired_at
-        }
-        refuse_time = (datetime.now() + timedelta(seconds=110)).strftime("%Y-%m-%d %H:%M:%S")
-
-        # 发送上传请求
-        response = requests.post(helloimg_url, headers=headers, files=files, data=helloimg_data)
-
-        # 检查响应内容是否符合预期
-        response_data = None
-        try:
-            response_data = response.json()
-            if not response_data['status']:
-                if response_data['message'] == "Unauthenticated.":
-                    logger.error("Token失效，无法上传图片。请检查你的上传Token。")
-                    logger.info(f"使用的Token: {helloimg_token}")
-                    # self._ip_changed = False
-                    return
-                else:
-                    logger.error(f"上传到图床失败: {response_data['message']}")
-                self._ip_changed = False
-                return
-
-            img_src = response_data['data']['links']['html']
-            return img_src.split('"')[1], refuse_time  # 提取 img src
-        except KeyError as e:
-            logger.error(f"上传图片时解析响应失败: {e}, 响应内容: {response_data}")
-            self._ip_changed = False
-            return
-
     def __update_config(self):
         """
         更新配置
@@ -704,13 +723,15 @@ class Dydebug(_PluginBase):
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
             "cron": self._cron,
-            # "wechatUrl": self._wechatUrl,
-            "current_ip_address": self._current_ip_address,
-            "ip_changed": self._ip_changed,
+            "use_wechat": self._use_wechat,
+            # "cookie_valid": self._cookie_valid,
+            #
+            # "current_ip_address": self._current_ip_address,
+            # "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
-            "helloimg_s_token": self._helloimg_s_token,
-            "pushplus_token": self._pushplus_token,
+            # "helloimg_s_token": self._helloimg_s_token,
+            "notification_token": self._notification_token,
             "input_id_list": self._input_id_list,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
@@ -780,7 +801,6 @@ class Dydebug(_PluginBase):
                             }
                         ]
                     },
-                    # 添加 "使用CookieCloud获取cookie" 开关按钮
                     {
                         'component': 'VRow',
                         'content': [
@@ -815,6 +835,22 @@ class Dydebug(_PluginBase):
                                         }
                                     }
                                 ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'use_wechat',
+                                            'label': '企业微应用接收二维码',
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
@@ -834,6 +870,24 @@ class Dydebug(_PluginBase):
                                             'model': 'cron',
                                             'label': '[必填]检测周期',
                                             'placeholder': '0 * * * *'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'notification_token',
+                                            'label': '[可选] 第三方通知token/api',
+                                            'rows': 1,
+                                            'placeholder': '[可选] 请输入第三方通知token/api'
                                         }
                                     }
                                 ]
@@ -868,47 +922,6 @@ class Dydebug(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'pushplus_token',
-                                            'label': '[可选]pushplus_token',
-                                            'rows': 1,
-                                            'placeholder': '[可选] 请输入 pushplus_token'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'helloimg_s_token',
-                                            'label': '[可选]helloimg_s_token',
-                                            'rows': 1,
-                                            'placeholder': '[可选] 请输入 helloimg_token'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
                                     'cols': 12
                                 },
                                 'content': [
@@ -917,7 +930,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '使用内建CookieCloud 或 自定义 或 填写两个token 至少三选一。任何扫码操作都会更新Cookie！'
+                                            'text': '使用内建CookieCloud 或 自定义 或 填写两个token 至少三选一。具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -937,7 +950,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': '优先使用cookie，当IP变动 且 cookie失效 且 填写两个token才会调用API推送登录二维码。',
+                                            'text': '优先使用cookie，当IP变动 且 cookie失效 且 填写两个token才会调用API推送登录二维码。'
                                         }
                                     }
                                 ]
@@ -952,11 +965,11 @@ class Dydebug(_PluginBase):
             "onlyonce": False,
             "forceUpdate": False,
             "use_cookiecloud": True,
-            "use_local_qr": False,  # 默认关闭本地扫码
+            "use_local_qr": False,
             "cookie_header": "",
-            "pushplus_token": "",
-            "helloimg_token": "",
+            "notification_token": "",
             "input_id_list": "",
+            "use_wechat": False
         }
 
     def get_page(self) -> List[dict]:
@@ -1082,7 +1095,7 @@ class Dydebug(_PluginBase):
                 ]
             }
         ]
-        
+
         return base_content
 
     @eventmanager.register(EventType.PluginAction)
@@ -1104,10 +1117,29 @@ class Dydebug(_PluginBase):
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)
-                if self.find_qrc(page):
-                    if self._pushplus_token and self._helloimg_s_token:
-                        img_src, refuse_time = self.upload_image(self._qr_code_image)
-                        self.send_pushplus_message(refuse_time, f"企业微信登录二维码<br/><img src='{img_src}' />")
+                img_src, refuse_time = self.find_qrc(page)
+                if img_src:
+                    if self._use_wechat:
+                        logger.info("远程推送任务: 尝试使用微信推送二维码")
+                        if self._ip_changed:
+                            self.post_message(
+                                mtype=NotificationType.Plugin,
+                                title="企业微信登录二维码",
+                                text=refuse_time,
+                                image=img_src
+                            )
+                            logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
+                            # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                            time.sleep(90)
+                            login_status = self.check_login_status(page, 'push_qr_code')
+                            if login_status:
+                                self._update_cookie(page, context)  # 刷新cookie
+                                # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
+                                self.click_app_management_buttons(page)
+                        else:
+                            logger.warning("因cooke失效没有及时更新可信IP，尝试第三方通知发送二维码")
+                    elif self._notification_token:
+                        self.send_message(refuse_time, img_src)
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
@@ -1116,8 +1148,6 @@ class Dydebug(_PluginBase):
                             self._update_cookie(page, context)  # 刷新cookie
                             # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
-                    else:
-                        logger.warning("远程推送任务: 未配置pushplus_token和helloimg_s_token")
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
         except Exception as e:
@@ -1187,5 +1217,3 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
