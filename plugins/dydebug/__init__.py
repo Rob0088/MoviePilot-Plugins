@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -128,8 +128,8 @@ class Dydebug(_PluginBase):
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
             self._use_wechat = config.get("use_wechat")
-        if self._use_cookiecloud:
-            self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)   # 及时更新存活时间
+        # if self._use_cookiecloud:
+        #     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)   # 及时更新存活时间
 
         # 停止现有任务
         self.stop_service()
@@ -358,86 +358,104 @@ class Dydebug(_PluginBase):
             return None, None
 
     def send_message(self, title, img_src):
-        letters_only = ''.join(re.findall(r'[A-Za-z]', self._notification_token))
-        if self._notification_token.startswith("SCT"):
-            push_type = "ServerChan"
-        elif letters_only.isupper():
-            push_type = "Anpush"
-        else:
-            push_type = "pushplus"
-
-       # 判断推送类型
-        if push_type == "pushplus":
-            pushplus_url = f"http://www.pushplus.plus/send/{self._notification_token}"
-            if 'https' in img_src:
-                pushplus_data = {
-                    "title": title,
-                    "content": f"企业微信登录二维码<br/><img src='{img_src}' />",
-                    "template": "html"
-                }
+        if self._use_wechat and self._ip_changed:    # 优先使用微信且上次IP修改成功
+            if 'https' in img_src:  # 是二维码
+                self.post_message(
+                    mtype=NotificationType.Plugin,
+                    title='企业微信登录二维码',
+                    text=f"二维码刷新时间：{title}",
+                    image=img_src
+                )
             else:
-                pushplus_data = {
-                    "title": title,
-                    "content": f"{img_src}",
-                    "template": "html"
-                }
-            response = requests.post(pushplus_url, json=pushplus_data)
-            result = response.json()
-        elif push_type == "ServerChan":
-            # 判断 sendkey 是否以 'sctp' 开头，并提取数字构造 URL
-            if self._notification_token.startswith('sctp'):
-                match = re.match(r'sctp(\d+)t', self._notification_token)
-                if match:
-                    num = match.group(1)
-                    url = f'https://{num}.push.ft07.com/send/{self._notification_token}.send'
+                self.post_message(
+                    mtype=NotificationType.Plugin,
+                    title=title,
+                    text=f"{img_src}",
+                    # image=img_src
+                )
+        elif self._notification_token:
+            letters_only = ''.join(re.findall(r'[A-Za-z]', self._notification_token))
+            if self._notification_token.startswith("SCT"):
+                push_type = "ServerChan"
+            elif letters_only.isupper():
+                push_type = "Anpush"
+            else:
+                push_type = "pushplus"
+    
+           # 判断推送类型
+            if push_type == "pushplus":
+                pushplus_url = f"http://www.pushplus.plus/send/{self._notification_token}"
+                if 'https' in img_src:
+                    pushplus_data = {
+                        "title": title,
+                        "content": f"企业微信登录二维码<br/><img src='{img_src}' />",
+                        "template": "html"
+                    }
                 else:
-                    raise ValueError('Invalid sendkey format for sctp')
-            else:
-                url = f'https://sctapi.ftqq.com/{self._notification_token}.send'
-            if 'https' in img_src:
-                params = {
-                    'title': title,
-                    'desp': f'![img]({img_src})',
-                    # **options
+                    pushplus_data = {
+                        "title": title,
+                        "content": f"{img_src}",
+                        "template": "html"
+                    }
+                response = requests.post(pushplus_url, json=pushplus_data)
+                result = response.json()
+            elif push_type == "ServerChan":
+                # 判断 sendkey 是否以 'sctp' 开头，并提取数字构造 URL
+                if self._notification_token.startswith('sctp'):
+                    match = re.match(r'sctp(\d+)t', self._notification_token)
+                    if match:
+                        num = match.group(1)
+                        url = f'https://{num}.push.ft07.com/send/{self._notification_token}.send'
+                    else:
+                        raise ValueError('Invalid sendkey format for sctp')
+                else:
+                    url = f'https://sctapi.ftqq.com/{self._notification_token}.send'
+                if 'https' in img_src:
+                    params = {
+                        'title': title,
+                        'desp': f'![img]({img_src})',
+                        # **options
+                    }
+                else:
+                    params = {
+                        'title': title,
+                        'desp': f'{img_src}',
+                        # **options
+                    }
+                headers = {
+                    'Content-Type': 'application/json;charset=utf-8'
                 }
-            else:
-                params = {
-                    'title': title,
-                    'desp': f'{img_src}',
-                    # **options
+                response = requests.post(url, json=params, headers=headers)
+                result = response.json()
+                # return result
+            elif push_type == "Anpush":
+                # 提取频道和 token
+                if ',' in self._notification_token:
+                    channel, token = self._notification_token.split(',', 1)
+                else:
+                    logger.error("Anpush 必须包含通知频道，格式应为 '频道,token'")
+                    raise ValueError("Anpush 必须包含通知频道，格式应为 '频道,token'")
+    
+                url = f"https://api.anpush.com/push/{token}"
+                if 'https' in img_src:
+                    payload = {
+                        "title": title,
+                        "content": f"<img src=\"{img_src}\" width=\"100%\">",
+                        "channel": channel
+                    }
+                else:
+                    payload = {
+                        "title": title,
+                        "content": f"{img_src}",
+                        "channel": channel
+                    }
+                headers = {
+                    "Content-Type": "application/x-www-form-urlencoded"
                 }
-            headers = {
-                'Content-Type': 'application/json;charset=utf-8'
-            }
-            response = requests.post(url, json=params, headers=headers)
-            result = response.json()
-            # return result
-        elif push_type == "Anpush":
-            # 提取频道和 token
-            if ',' in self._notification_token:
-                channel, token = self._notification_token.split(',', 1)
-            else:
-                logger.error("Anpush 必须包含通知频道，格式应为 '频道,token'")
-                raise ValueError("Anpush 必须包含通知频道，格式应为 '频道,token'")
-
-            url = f"https://api.anpush.com/push/{token}"
-            if 'https' in img_src:
-                payload = {
-                    "title": title,
-                    "content": f"<img src=\"{img_src}\" width=\"100%\">",
-                    "channel": channel
-                }
-            else:
-                payload = {
-                    "title": title,
-                    "content": f"{img_src}",
-                    "channel": channel
-                }
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            response = requests.post(url, headers=headers, data=payload)
-            result = response.json()
+                response = requests.post(url, headers=headers, data=payload)
+                result = response.json()
+        else:
+            logger.warning("没有启用企微接收二维码或可信IP已与网络出口IP不一致。未配置第三方推送通知")
 
     def ChangeIP(self, task=None):
         logger.info(f'消息发送状态:{self._msg_sent}, 进入函数:{task}')
@@ -448,50 +466,27 @@ class Dydebug(_PluginBase):
                     # 启动 Chromium 浏览器并设置语言为中文
                     browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
                     context = browser.new_context()
-                    # ----------cookie addd-----------------
                     cookie = self.get_cookie()
                     if cookie:
                         context.add_cookies(cookie)
-                    # ----------cookie END-----------------
                     page = context.new_page()
                     page.goto(self._wechatUrl)
                     time.sleep(3)
                     img_src, refuse_time = self.find_qrc(page)
                     if img_src:
-                        if self._use_wechat:
-                            if self._ip_changed:
-                                self.post_message(
-                                    mtype=NotificationType.Plugin,
-                                    title="企业微信登录二维码",
-                                    text=refuse_time,
-                                    image=img_src
-                                )
-                                logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
-                                # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                                time.sleep(90)  # 等待用户扫码
-                                login_status = self.check_login_status(page, "")
-                                if login_status:
-                                    self._update_cookie(page, context)  # 刷新cookie
-                                    self.click_app_management_buttons(page)
-                                else:
-                                    self._ip_changed = False
-                            else:
-                                logger.warning("因cookie失效，未及时更新可信IP，尝试第三方通知发送二维码")
-
-                        elif self._notification_token:
-                            self.send_message(refuse_time, img_src)
-                            logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
-                            # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                            time.sleep(90)  # 等待用户扫码
-                            login_status = self.check_login_status(page, "")
-                            if login_status:
-                                self._update_cookie(page, context)  # 刷新cookie
-                                self.click_app_management_buttons(page)
-                            else:
-                                self._ip_changed = False
+                        self.send_message(refuse_time, img_src)
+                        logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
+                        # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                        time.sleep(90)  # 等待用户扫码
+                        login_status = self.check_login_status(page, "")
+                        if login_status:
+                            self._update_cookie(page, context)  # 刷新cookie
+                            self.click_app_management_buttons(page)
                         else:
                             self._ip_changed = False
-                            logger.warning("cookie失效，且使用第三方通知，不再尝试更改可信IP")
+                    # else:
+                    #     self._ip_changed = False
+                    #     logger.warning("cookie失效，且使用第三方通知，不再尝试更改可信IP")
 
                     else:  # 如果直接进入企业微信
                         logger.info("尝试cookie登录")
