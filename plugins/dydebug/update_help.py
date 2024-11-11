@@ -3,13 +3,9 @@ import json
 import requests
 import base64
 import hashlib
-
 from typing import Dict, Any
 from Crypto import Random
 from Crypto.Cipher import AES
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-settings_file = os.path.join(script_dir, 'settings.json')
 
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
@@ -41,11 +37,11 @@ def encrypt(message: bytes, passphrase: bytes) -> bytes:
 
 
 class PyCookieCloud:
-    def __init__(self, url: str, uuid: str, password: str):
+    def __init__(self, url: str, uuid: str, password: str, settings_path: str):
         self.url: str = url
         self.uuid: str = uuid
         self.password: str = password
-
+        self.settings_file: str = settings_path
     def check_connection(self) -> bool:
         """
         Test the connection to the CookieCloud server.
@@ -99,7 +95,7 @@ class PyCookieCloud:
         return md5.hexdigest()[:16]
 
     @staticmethod
-    def load_cookie_lifetime():    # 返回时间戳 单位秒
+    def load_cookie_lifetime(settings_file: str = None):    # 返回时间戳 单位秒
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
@@ -108,13 +104,13 @@ class PyCookieCloud:
             return 0
 
     @staticmethod
-    def save_cookie_lifetime(cookie_lifetime):  # 传入时间戳 单位秒
+    def save_cookie_lifetime(settings_file, cookie_lifetime):  # 传入时间戳 单位秒
         with open(settings_file, 'w') as file:
             json.dump({'_cookie_lifetime': cookie_lifetime}, file)
 
     @staticmethod
-    def increase_cookie_lifetime(seconds: int):
+    def increase_cookie_lifetime(settings_file, seconds: int):
         current_lifetime = PyCookieCloud.load_cookie_lifetime()
         new_lifetime = current_lifetime + seconds
         # 保存新的 _cookie_lifetime
-        PyCookieCloud.save_cookie_lifetime(new_lifetime)
+        PyCookieCloud.save_cookie_lifetime(settings_file, new_lifetime)
