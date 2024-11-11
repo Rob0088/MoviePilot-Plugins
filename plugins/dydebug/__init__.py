@@ -1115,35 +1115,15 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
-                    if self._use_wechat:
-                        logger.info("远程推送任务: 尝试使用微信推送二维码")
-                        if self._ip_changed:
-                            self.post_message(
-                                mtype=NotificationType.Plugin,
-                                title="企业微信登录二维码",
-                                text=refuse_time,
-                                image=img_src
-                            )
-                            logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
-                            # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                            time.sleep(90)
-                            login_status = self.check_login_status(page, 'push_qr_code')
-                            if login_status:
-                                self._update_cookie(page, context)  # 刷新cookie
-                                # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
-                                self.click_app_management_buttons(page)
-                        else:
-                            logger.warning("因cooke失效没有及时更新可信IP，尝试第三方通知发送二维码")
-                    elif self._notification_token:
-                        self.send_message(refuse_time, img_src)
-                        logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
-                        # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
-                        time.sleep(90)
-                        login_status = self.check_login_status(page, 'push_qr_code')
-                        if login_status:
-                            self._update_cookie(page, context)  # 刷新cookie
-                            # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
-                            self.click_app_management_buttons(page)
+                    self.send_message(refuse_time, img_src)
+                    logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
+                    # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                    time.sleep(90)
+                    login_status = self.check_login_status(page, 'push_qr_code')
+                    if login_status:
+                        self._update_cookie(page, context)  # 刷新cookie
+                        # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
+                        self.click_app_management_buttons(page)
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
         except Exception as e:
