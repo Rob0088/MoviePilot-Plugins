@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.0.5"
+    plugin_version = "1.0.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -440,7 +440,7 @@ class Dydebug(_PluginBase):
             result = response.json()
 
     def ChangeIP(self, task=None):
-        logger.info(f'self._msg_sent:{self._msg_sent},task:{task}')
+        logger.info(f'消息发送状态:{self._msg_sent}, 进入函数:{task}')
         if not self._msg_sent or task == "forced_change":  # 没发过通知
             logger.info("开始请求企业微信管理更改可信IP")
             try:
@@ -601,12 +601,12 @@ class Dydebug(_PluginBase):
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
                     logger.warning("cookie已失效，发送一次通知")
-                    if self._msg_sent:
+                    if not self._msg_sent:
                         self.send_message("cookie已失效", "请使用push_qr命令推送二维码到微信/企微应用更新cookie")
-                        self._msg_sent = False
+                        self._msg_sent = True  # 标记消息已发送
                 else:
                     self._cookie_valid = True
-                    self._msg_sent = True
+                    self._msg_sent = False   # 标记消息未发送
                     PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
