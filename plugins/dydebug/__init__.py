@@ -847,7 +847,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'use_wechat',
-                                            'label': '企业微应用接收二维码',
+                                            'label': '企微应用接收二维码',
                                         }
                                     }
                                 ]
