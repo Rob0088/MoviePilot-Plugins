@@ -73,7 +73,7 @@ class MySender:
                 title='企业微信登录二维码',
                 text=f"二维码刷新时间：{content}",
                 image=contains_image,
-                link=contains_image
+                # link=contains_image
             )
         else:
             # 发送纯文本消息
