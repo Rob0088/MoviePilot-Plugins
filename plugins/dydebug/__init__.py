@@ -338,25 +338,29 @@ class Dydebug(_PluginBase):
                 logger.warning(f"{url} 获取IP失败,Error: {e}")
 
     def find_qrc(self, page):
-        # 查找 iframe 元素并切换到它
         try:
-            page.wait_for_selector("iframe", timeout=5000)  # 等待 iframe 加载
+            # 等待 iframe 加载并获取二维码图片元素
+            page.wait_for_selector("iframe", timeout=5000)
             iframe_element = page.query_selector("iframe")
             frame = iframe_element.content_frame()
 
-            # 查找二维码图片元素
+            # 等待二维码图片加载
             qr_code_element = frame.query_selector("img.qrcode_login_img")
             if qr_code_element:
-                # logger.info("找到二维码图片元素")
-                # 保存二维码图片
+                qr_code_element.wait_for(state="visible", timeout=2000)
                 qr_code_url = qr_code_element.get_attribute('src')
-                if qr_code_url.startswith("/"):
-                    qr_code_url = "https://work.weixin.qq.com" + qr_code_url  # 补全二维码 URL
 
-                qr_code_data = requests.get(qr_code_url).content
-                self._qr_code_image = io.BytesIO(qr_code_data)
+                # 转换二维码 URL 为绝对路径
+                base_url = page.url
+                absolute_url = urljoin(base_url, qr_code_url)
+
+                # 下载并保存二维码图片数据到 self._qr_code_image
+                qr_code_data = requests.get(absolute_url).content
+                self._qr_code_image = io.BytesIO(qr_code_data)  # 保存二维码图片数据为字节流
+
+                # 计算二维码的有效时间
                 refuse_time = (datetime.now() + timedelta(seconds=115)).strftime("%Y-%m-%d %H:%M:%S")
-                return qr_code_url, refuse_time
+                return absolute_url, refuse_time
             else:
                 logger.warning("未找到二维码")
                 return None, None
@@ -383,7 +387,7 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
-                    if self._my_send:  # 初始化成功
+                    if self._my_send:
                         self._my_send.send("企业微信登录二维码", content=refuse_time, image=img_src, force_send=False)
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
@@ -507,7 +511,7 @@ class Dydebug(_PluginBase):
                 else:
                     self._cookie_valid = True
                     # if self._my_send:
-                    self._my_send.reset_text_send_limit()
+                    self._my_send.reset_limit()
                     logger.info("cookie已经恢复")
                     PyCookieCloud.increase_cookie_lifetime(1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
@@ -1008,6 +1012,7 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
+                        logger.info(f"远程推送任务: {image_src}")
                         self._my_send.send("企业微信登录二维码", content=refuse_time, image=image_src, force_send=False)
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
@@ -1088,3 +1093,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+            
