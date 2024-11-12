@@ -6,11 +6,14 @@ from app.modules.wechat.wechat import WeChat
 class MySender:
     def __init__(self, token=None):
         if not token:  # 如果 token 为空
-            self.token = "WeChat"  # 使用一个默认的 token
+            self.token = None
+            self.channel = None
+            self.init_success = False  # 标识初始化失败
         else:
             self.token = token
-        self.channel = self.send_channel()  # 初始化时确定发送渠道
-        self.first_text_sent = False  # 记录是否已经发送过纯文本消息
+            self.channel = self.send_channel()  # 初始化时确定发送渠道
+            self.first_text_sent = False  # 记录是否已经发送过纯文本消息
+            self.init_success = True  # 标识初始化成功
 
     def send_channel(self):
         if self.token:
@@ -30,8 +33,8 @@ class MySender:
 
     # 标题，内容，图片，是否强制发送
     def send(self, title, content, image=None, force_send=False, diy_chnnel=None):
-        # if not self.init_success:
-        #     return  # 如果初始化失败，直接返回
+        if not self.init_success:
+            return  # 如果初始化失败，直接返回
         # 判断发送的内容类型
         contains_image = bool(image)  # 是否包含图片
 
@@ -71,9 +74,9 @@ class MySender:
             # 发送带图片的消息
             send_status = wechat.send_msg(
                 title='企业微信登录二维码',
-                text=f"二维码刷新时间：{content}",
+                # text=f"二维码刷新时间：{content}",
                 image=contains_image,
-                # link=contains_image
+                link=contains_image
             )
         else:
             # 发送纯文本消息
@@ -153,7 +156,6 @@ class MySender:
         response = requests.post(pushplus_url, json=pushplus_data)
         result = response.json()
 
-    def reset_text_send_limit(self):
+    def reset_limit(self):
         """解除限制，允许再次发送纯文本消息"""
         self.first_text_sent = False
-        # print("纯文本消息发送限制已解除。")
