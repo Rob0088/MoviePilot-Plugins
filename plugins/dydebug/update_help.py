@@ -37,11 +37,10 @@ def encrypt(message: bytes, passphrase: bytes) -> bytes:
 
 
 class PyCookieCloud:
-    def __init__(self, url: str, uuid: str, password: str, settings_path: str):
+    def __init__(self, url: str, uuid: str, password: str):
         self.url: str = url
         self.uuid: str = uuid
         self.password: str = password
-        self.settings_file: str = settings_path
 
     def check_connection(self) -> bool:
         """
