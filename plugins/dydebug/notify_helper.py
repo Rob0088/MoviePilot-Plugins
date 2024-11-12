@@ -50,7 +50,7 @@ class MySender:
                 channel = diy_channel
 
             if channel == "WeChat":
-                return self.send_wechat(title, content, image)
+                return MySender.send_wechat(title, content, image)
             elif channel == "ServerChan":
                 return self.send_serverchan(title, content, image)
             elif channel == "AnPush":
@@ -62,7 +62,8 @@ class MySender:
         except Exception as e:
             return f"Error occurred: {str(e)}"
 
-    def send_wechat(self, title, content, image):
+    @staticmethod
+    def send_wechat(title, content, image):
         wechat = WeChat()
         if image:
             send_status = wechat.send_msg(title='企业微信登录二维码', image=image, link=image)
