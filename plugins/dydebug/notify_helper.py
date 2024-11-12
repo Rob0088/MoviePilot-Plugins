@@ -30,8 +30,8 @@ class MySender:
 
     # 标题，内容，图片，是否强制发送
     def send(self, title, content, image=None, force_send=False, diy_chnnel=None):
-        if not self.init_success:
-            return  # 如果初始化失败，直接返回
+        # if not self.init_success:
+        #     return  # 如果初始化失败，直接返回
         # 判断发送的内容类型
         contains_image = bool(image)  # 是否包含图片
 
@@ -66,17 +66,20 @@ class MySender:
 
     def send_wechat(self, title, content, contains_image):
         # WeChat发送逻辑
+        wechat = WeChat()
         if contains_image:
-            WeChat().send_msg(
+            # 发送带图片的消息
+            send_status = wechat.send_msg(
                 title='企业微信登录二维码',
                 text=f"二维码刷新时间：{content}",
                 image=contains_image,
                 link=contains_image
             )
         else:
-            WeChat().send_msg(
+            # 发送纯文本消息
+            send_status = wechat.send_msg(
                 title=title,
-                text=f"{content}",
+                text=f"{content}"
             )
 
     def send_serverchan(self, title, content, contains_image):
