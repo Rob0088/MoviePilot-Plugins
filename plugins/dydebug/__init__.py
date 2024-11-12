@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.2"
+    plugin_version = "1.1.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -501,7 +501,6 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
-                    # if self._my_send.init_success:
                     self._my_send.send(title="cookie已失效",
                                        content="请使用/push_qr刷新cookie",
                                        image=None, force_send=False)  # 标题，内容，图片，是否强制发送
@@ -777,7 +776,7 @@ class Dydebug(_PluginBase):
                                             'model': 'notification_token',
                                             'label': '[可选] 第三方通知token/api',
                                             'rows': 1,
-                                            'placeholder': '[可选] 请输入第三方通知token/api'
+                                            'placeholder': '留空则使用微信通知'
                                         }
                                     }
                                 ]
@@ -840,7 +839,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'cookie失效时会发送通知，用户发送/push_qr才会推送二维码。通知填写WeChat时使用微信通知'
+                                            'text': 'cookie失效时通知用户，用户使用/push_qr推送二维码。默认微信通知'
                                         }
                                     }
                                 ]
@@ -1008,7 +1007,7 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
-                    if self._my_send.init_success:
+                    if self._my_send:
                         self._my_send.send("企业微信登录二维码", content=refuse_time, image=image_src, force_send=False)
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
