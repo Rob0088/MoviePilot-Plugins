@@ -46,24 +46,24 @@ class MySender:
         # 根据发送渠道调用相应的发送方法
         if not diy_chnnel:  # 用户没有指定通知方式，使用初始化时确定的通知方式
             if self.channel == "WeChat":
-                self.send_wechat(title, content, contains_image)
+                self.send_wechat(title, content, image)
             elif self.channel == "ServerChan":
-                self.send_serverchan(title, content, contains_image)
+                self.send_serverchan(title, content, image)
             elif self.channel == "AnPush":
-                self.send_anpush(title, content, contains_image)
+                self.send_anpush(title, content, image)
             elif self.channel == "PushPlus":
-                self.send_pushplus(title, content, contains_image)
+                self.send_pushplus(title, content, image)
             else:
                 raise ValueError("Unknown channel")
         else:
             if diy_chnnel == "WeChat":
-                self.send_wechat(title, content, contains_image)
+                self.send_wechat(title, content, image)
             elif diy_chnnel == "ServerChan":
-                self.send_serverchan(title, content, contains_image)
+                self.send_serverchan(title, content, image)
             elif diy_chnnel == "AnPush":
-                self.send_anpush(title, content, contains_image)
+                self.send_anpush(title, content, image)
             elif diy_chnnel == "PushPlus":
-                self.send_pushplus(title, content, contains_image)
+                self.send_pushplus(title, content, image)
             else:
                 raise ValueError("Unknown channel")
 
@@ -78,6 +78,7 @@ class MySender:
                 image=contains_image,
                 link=contains_image
             )
+        # WeChat().send_msg(title = "点击扫描二维码登录企业微信",image='。。。',link='。。。')
         else:
             # 发送纯文本消息
             send_status = wechat.send_msg(
