@@ -57,9 +57,6 @@ class Dydebug(_PluginBase):
     _local_scan = False
     # 类初始化时添加标记变量
     _is_special_upload = False
-    # 希望使用微信
-    _use_wechat = False
-
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -108,21 +105,17 @@ class Dydebug(_PluginBase):
         self._forced_update = False
         self._use_cookiecloud = True
         self._local_scan = False
-        self._use_wechat = False
         self._input_id_list = ''
         self._cookie_header = ""
         self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         if config:
-            self._use_wechat = config.get("use_wechat")
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
-            # self._pushplus_token = config.get("pushplus_token")
-            # self._helloimg_s_token = config.get("helloimg_s_token")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
@@ -182,8 +175,25 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
-        self.ChangeIP()
-        self.__update_config()
+        # 先尝试cookie登陆
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                context = browser.new_context()
+                cookie = self.get_cookie()
+                if cookie:
+                    context.add_cookies(cookie)
+                page = context.new_page()
+                page.goto(self._wechatUrl)
+                time.sleep(3)
+                if self.check_login_status(page, task='forced_change'):
+                    self.click_app_management_buttons(page)
+                else:
+                    logger.error("cookie失效,强制修改IP失败：请使用'本地扫码修改IP'")
+                browser.close()
+        except Exception as err:
+            logger.error(f"强制修改IP失败：{err}")
+
         logger.info("----------------------本次任务结束----------------------")
 
     @eventmanager.register(EventType.PluginAction)
@@ -373,7 +383,7 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
-                    if self._my_send.init_success:  # 初始化成功
+                    if self._my_send:  # 初始化成功
                         self._my_send.send("企业微信登录二维码", content=refuse_time, image=img_src, force_send=False)
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
@@ -386,17 +396,14 @@ class Dydebug(_PluginBase):
                             self._ip_changed = False
                     else:
                         self._ip_changed = False
-                        logger.info("cookie失效，请扫码更新cookie，推送二维码到手机需要配置通知方式")
+                        logger.info("cookie已失效")
                 else:  # 如果直接进入企业微信
                     logger.info("尝试cookie登录")
-                    # ----------cookie addd-----------------
                     login_status = self.check_login_status(page, "")
                     if login_status:
                         self.click_app_management_buttons(page)
                     else:
-                        # ----------cookie END-----------------
                         self._ip_changed = False
-                        # return
                 browser.close()
 
         except Exception as e:
@@ -494,14 +501,14 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
-                    if self._my_send.init_success:
-                        self._my_send.send(title="cookie已失效",
-                                           content="请使用/push_qr刷新cookie",
-                                           image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                    # if self._my_send.init_success:
+                    self._my_send.send(title="cookie已失效",
+                                       content="请使用/push_qr刷新cookie",
+                                       image=None, force_send=False)  # 标题，内容，图片，是否强制发送
                 else:
                     self._cookie_valid = True
-                    if self._my_send.init_success:
-                        self._my_send.reset_text_send_limit()
+                    # if self._my_send:
+                    self._my_send.reset_text_send_limit()
                     logger.info("cookie已经恢复")
                     PyCookieCloud.increase_cookie_lifetime(1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
@@ -621,7 +628,6 @@ class Dydebug(_PluginBase):
         """
         self.update_config({
             "enabled": self._enabled,
-            "use_wechat": self._use_wechat,
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "notification_token": self._notification_token,
@@ -814,7 +820,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '使用内建CookieCloud 或 自定义 或 填写第三方通知token 至少三选一。具体请查看作者主页'
+                                            'text': '必须使用内建CookieCloud 或 自定义CookieCloud二选一。具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -852,8 +858,7 @@ class Dydebug(_PluginBase):
             "use_local_qr": False,
             "cookie_header": "",
             "notification_token": "",
-            "input_id_list": "",
-            "use_wechat": False
+            "input_id_list": ""
         }
 
     def get_page(self) -> List[dict]:
