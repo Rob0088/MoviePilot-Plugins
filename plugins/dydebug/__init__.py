@@ -774,9 +774,9 @@ class Dydebug(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'notification_token',
-                                            'label': '[可选] 第三方通知token/api',
+                                            'label': '[可选] 通知方式',
                                             'rows': 1,
-                                            'placeholder': '留空则使用微信通知'
+                                            'placeholder': '使用企微应用填WeChat,兼容Server酱、PushPlus、AnPush'
                                         }
                                     }
                                 ]
@@ -819,7 +819,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '必须使用内建CookieCloud 或 自定义CookieCloud二选一。具体请查看作者主页'
+                                            'text': '建议启用内建CookieCloud 或 自定义CookieCloud。具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -839,7 +839,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'cookie失效时通知用户，用户使用/push_qr推送二维码。默认微信通知'
+                                            'text': 'cookie失效时通知用户，用户使用/push_qr推送二维码。使用第三方通知时填写对应TOKEN/API即可'
                                         }
                                     }
                                 ]
