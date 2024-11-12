@@ -6,15 +6,11 @@ from app.modules.wechat.wechat import WeChat
 class MySender:
     def __init__(self, token=None):
         if not token:  # 如果 token 为空
-            self.token = None
-            self.channel = None
-            self.init_success = False  # 标识初始化失败
-
+            self.token = "WeChat"  # 使用一个默认的 token
         else:
             self.token = token
-            self.channel = self.send_channel()  # 初始化时确定发送渠道
-            self.first_text_sent = False  # 记录是否已经发送过纯文本消息
-            self.init_success = True  # 标识初始化成功
+        self.channel = self.send_channel()  # 初始化时确定发送渠道
+        self.first_text_sent = False  # 记录是否已经发送过纯文本消息
 
     def send_channel(self):
         if self.token:
@@ -38,7 +34,6 @@ class MySender:
             return  # 如果初始化失败，直接返回
         # 判断发送的内容类型
         contains_image = bool(image)  # 是否包含图片
-        # is_qr_code = self.is_qr_code(content)  # 是否包含二维码链接
 
         if not contains_image and not force_send:
             if self.first_text_sent:
