@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
-    # 兼容v1 v2 将bytes_to_key和encrypt导入
+    # 兼容v2 将bytes_to_key和encrypt导入
     assert len(salt) == 8, len(salt)
     data += salt
     key = hashlib.md5(data).digest()
