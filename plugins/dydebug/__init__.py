@@ -21,7 +21,7 @@ from app.plugins import _PluginBase
 from app.plugins.dydebug.update_help import PyCookieCloud
 from app.plugins.dydebug.notify_helper import MySender
 from app.schemas.types import EventType, NotificationType
-from app.modules.wechat.wechat import WeChat
+# from app.modules.wechat.wechat import WeChat
 
 class Dydebug(_PluginBase):
     # 插件名称
@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.7"
+    plugin_version = "1.1.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -122,6 +122,8 @@ class Dydebug(_PluginBase):
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
         self._my_send = MySender(self._notification_token)
+        if not self._my_send.init_success:    # 没有输入通知方式，不通知
+            self._my_send = None
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -384,7 +386,7 @@ class Dydebug(_PluginBase):
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
                     if self._my_send:
-                        self._my_send.send("企业微信登录二维码", content=refuse_time, image=img_src, force_send=False)
+                        self._my_send.send("企业微信登录二维码", image=img_src, force_send=False)
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)  # 等待用户扫码
@@ -501,13 +503,14 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
-                    self._my_send.send(title="cookie已失效",
-                                       content="请使用/push_qr刷新cookie",
-                                       image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                    if self._my_send:
+                        self._my_send.send(title="cookie已失效",
+                                           content="请使用/push_qr刷新cookie",
+                                           image=None, force_send=False)  # 标题，内容，图片，是否强制发送
                 else:
                     self._cookie_valid = True
-                    # if self._my_send:
-                    self._my_send.reset_limit()
+                    if self._my_send:
+                        self._my_send.reset_limit()
                     logger.info("cookie已经恢复")
                     PyCookieCloud.increase_cookie_lifetime(1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
@@ -607,8 +610,9 @@ class Dydebug(_PluginBase):
                     logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
                     ip_parts = self._current_ip_address.split('.')
                     masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
-                    self._my_send.send(title="更新可信IP成功",
-                                       content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                    if self._my_send:
+                        self._my_send.send(title="更新可信IP成功",
+                                           content='应用: ' + app_id + ' 输入IP：' + masked_ip,
                                     force_send=True, diy_chnnel="WeChat")
                     # self.post_message(
                     #     mtype=NotificationType.Plugin,
@@ -1008,8 +1012,8 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        logger.info(f"远程推送任务: {image_src}")
-                        self._my_send.send("企业微信登录二维码", content=refuse_time, image=image_src, force_send=False)
+                        # logger.info(f"远程推送任务: {image_src}")
+                        self._my_send.send("企业微信登录二维码", image=image_src, force_send=False)
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
