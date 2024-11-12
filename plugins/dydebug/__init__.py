@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.14"
+    plugin_version = "1.1.15"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -59,6 +59,8 @@ class Dydebug(_PluginBase):
     _is_special_upload = False
     # 聚合通知
     _my_send = None
+    # 通知方式
+    _notification_token = ''
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -72,13 +74,9 @@ class Dydebug(_PluginBase):
     _refresh_cron = '*/20 * * * *'
     # 输入的企业应用id
     _input_id_list = ''
-    # helloimg的token
-    _helloimg_s_token = ""
-    # pushplus的token
-    _pushplus_token = ""
     # 二维码
     _qr_code_image = None
-    _notification_token = ""
+    # 用户消息
     text = ""
     # 手机验证码
     _verification_code = ''
@@ -265,12 +263,7 @@ class Dydebug(_PluginBase):
             self.ChangeIP()
             self.__update_config()
 
-        # logger.info("检测公网IP完毕")
         logger.info("----------------------本次任务结束----------------------")
-        # if event:
-        #     self.post_message(channel=event.event_data.get("channel"),
-        #                       title="检测公网IP完毕",
-        #                       userid=event.event_data.get("user"))
 
     def CheckIP(self):
         retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
@@ -379,11 +372,9 @@ class Dydebug(_PluginBase):
                 # 启动 Chromium 浏览器并设置语言为中文
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
                 context = browser.new_context()
-                # ----------cookie addd-----------------
                 cookie = self.get_cookie()
                 if cookie:
                     context.add_cookies(cookie)
-                # ----------cookie END-----------------
                 page = context.new_page()
                 page.goto(self._wechatUrl)
                 time.sleep(3)
@@ -499,36 +490,34 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                context = browser.new_context()
-                cookie = self.get_cookie()
-                if cookie:
-                    context.add_cookies(cookie)
-                page = context.new_page()
-                page.goto(self._wechatUrl)
-                time.sleep(3)
-                if not self.check_login_status(page, task='refresh_cookie'):
-                    self._cookie_valid = False
-                    if self._my_send:
-                        result = self._my_send.send(title="cookie已失效",
-                                           content="如果配置了通知方式，请使用/push_qr刷新cookie",
-                                           image=None, force_send=False)  # 标题，内容，图片，是否强制发送
-                        if result:
-                            logger.info(f"cookie失效通知发送失败，原因：{result}")
-                            browser.close()
-                            return
-                else:
-                    self._cookie_valid = True
-                    if self._my_send:
-                        self._my_send.reset_limit()
-                    # logger.info("cookie已经恢复")
-                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
-                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
-                browser.close()
-        except Exception as e:
-            logger.error(f"cookie校验失败:{e}")
+        if self._use_cookiecloud:
+            try:
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                    context = browser.new_context()
+                    cookie = self.get_cookie()
+                    if cookie:
+                        context.add_cookies(cookie)
+                    page = context.new_page()
+                    page.goto(self._wechatUrl)
+                    time.sleep(3)
+                    if not self.check_login_status(page, task='refresh_cookie'):
+                        self._cookie_valid = False
+                        if self._my_send:
+                            result = self._my_send.send(title="cookie已失效，请及时更新",
+                                                        content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
+                                                        image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                            if result:
+                                logger.info(f"cookie失效通知发送失败，原因：{result}")
+                    else:
+                        self._cookie_valid = True
+                        if self._my_send:
+                            self._my_send.reset_limit()
+                        PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
+                        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
+                    browser.close()
+            except Exception as e:
+                logger.error(f"cookie校验失败:{e}")
 
     #
     def check_login_status(self, page, task):
@@ -624,14 +613,8 @@ class Dydebug(_PluginBase):
                     masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
                     if self._my_send:
                         result = self._my_send.send(title="更新可信IP成功",
-                                           content='应用: ' + app_id + ' 输入IP：' + masked_ip,
-                                           force_send=True, diy_channel="WeChat")
-                    # self.post_message(
-                    #     mtype=NotificationType.Plugin,
-                    #     title="更新可信IP成功",
-                    #     text='应用: ' + app_id + ' 输入IP：' + masked_ip,
-                    #     # image=img_src
-                    # )
+                                                    content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                                                    force_send=True, diy_channel="WeChat")
             return
         else:
             logger.error("未找到应用id，修改IP失败")
@@ -646,13 +629,10 @@ class Dydebug(_PluginBase):
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "notification_token": self._notification_token,
-            # "wechatUrl": self._wechatUrl,
             "current_ip_address": self._current_ip_address,
             "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
-            "helloimg_s_token": self._helloimg_s_token,
-            "pushplus_token": self._pushplus_token,
             "input_id_list": self._input_id_list,
             "cookie_header": self._cookie_header,
             "use_cookiecloud": self._use_cookiecloud,
@@ -792,7 +772,7 @@ class Dydebug(_PluginBase):
                                             'model': 'notification_token',
                                             'label': '[可选] 通知方式',
                                             'rows': 1,
-                                            'placeholder': '可填写WeChat或Server酱、PushPlus、AnPush等Token或API'
+                                            'placeholder': '支持微信、Server酱、PushPlus、AnPush等Token或API'
                                         }
                                     }
                                 ]
@@ -835,7 +815,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '建议启用内建CookieCloud 或 自定义CookieCloud。具体请查看作者主页'
+                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱、PushPlus、AnPush，具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -1052,7 +1032,7 @@ class Dydebug(_PluginBase):
             {
                 "cmd": "/push_qr",
                 "event": EventType.PluginAction,
-                "desc": "立即推送登录二维码到pushplus",
+                "desc": "立即推送登录二维码到",
                 "category": "",
                 "data": {
                     "action": "push_qrcode"
