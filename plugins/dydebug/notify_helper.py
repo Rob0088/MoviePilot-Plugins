@@ -4,10 +4,17 @@ from app.modules.wechat.wechat import WeChat
 
 
 class MySender:
-    def __init__(self, token):
-        self.token = token
-        self.channel = self.send_channel()  # 初始化时确定发送渠道
-        self.first_text_sent = False  # 记录是否已经发送过纯文本消息
+    def __init__(self, token=None):
+        if not token:  # 如果 token 为空
+            self.token = None
+            self.channel = None
+            self.init_success = False  # 标识初始化失败
+
+        else:
+            self.token = token
+            self.channel = self.send_channel()  # 初始化时确定发送渠道
+            self.first_text_sent = False  # 记录是否已经发送过纯文本消息
+            self.init_success = True  # 标识初始化成功
 
     def send_channel(self):
         if self.token:
@@ -26,30 +33,41 @@ class MySender:
         return None
 
     # 标题，内容，图片，是否强制发送
-    def send(self, title, content, image=None, force_send=False):
+    def send(self, title, content, image=None, force_send=False, diy_chnnel=None):
+        if not self.init_success:
+            return  # 如果初始化失败，直接返回
         # 判断发送的内容类型
         contains_image = bool(image)  # 是否包含图片
         # is_qr_code = self.is_qr_code(content)  # 是否包含二维码链接
 
-        # 检查是否是纯文本消息，并判断是否为首次发送或强制发送
         if not contains_image and not force_send:
             if self.first_text_sent:
-                # print("纯文本消息已发送过，跳过此次发送。")
                 return
             else:
-                self.first_text_sent = True  # 标记首次纯文本消息已发送
-
+                self.first_text_sent = True
         # 根据发送渠道调用相应的发送方法
-        if self.channel == "WeChat":
-            self.send_wechat(title, content, contains_image)
-        elif self.channel == "ServerChan":
-            self.send_serverchan(title, content, contains_image)
-        elif self.channel == "AnPush":
-            self.send_anpush(title, content, contains_image)
-        elif self.channel == "PushPlus":
-            self.send_pushplus(title, content, contains_image)
+        if not diy_chnnel:  # 用户没有指定通知方式，使用初始化时确定的通知方式
+            if self.channel == "WeChat":
+                self.send_wechat(title, content, contains_image)
+            elif self.channel == "ServerChan":
+                self.send_serverchan(title, content, contains_image)
+            elif self.channel == "AnPush":
+                self.send_anpush(title, content, contains_image)
+            elif self.channel == "PushPlus":
+                self.send_pushplus(title, content, contains_image)
+            else:
+                raise ValueError("Unknown channel")
         else:
-            raise ValueError("Unknown channel")
+            if diy_chnnel == "WeChat":
+                self.send_wechat(title, content, contains_image)
+            elif diy_chnnel == "ServerChan":
+                self.send_serverchan(title, content, contains_image)
+            elif diy_chnnel == "AnPush":
+                self.send_anpush(title, content, contains_image)
+            elif diy_chnnel == "PushPlus":
+                self.send_pushplus(title, content, contains_image)
+            else:
+                raise ValueError("Unknown channel")
 
     def send_wechat(self, title, content, contains_image):
         # WeChat发送逻辑
