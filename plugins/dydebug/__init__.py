@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.12"
+    plugin_version = "1.1.13"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -57,6 +57,8 @@ class Dydebug(_PluginBase):
     _local_scan = False
     # 类初始化时添加标记变量
     _is_special_upload = False
+    # 聚合通知
+    _my_send = None
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -82,6 +84,8 @@ class Dydebug(_PluginBase):
     _verification_code = ''
     # 过期时间
     _future_timestamp = 0
+    # 配置文件路径
+    _settings_file_path = None
 
     # cookie有效检测
     _cookie_valid = True
@@ -96,7 +100,6 @@ class Dydebug(_PluginBase):
     _cookiecloud = CookieCloudHelper()
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
-    _my_send = None
 
     def init_plugin(self, config: dict = None):
         # 清空配置
@@ -108,7 +111,8 @@ class Dydebug(_PluginBase):
         self._input_id_list = ''
         self._cookie_header = ""
         self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
-        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
+        self._settings_file_path = self.get_data_path() / "settings.json"
+        # self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         if config:
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
@@ -386,7 +390,11 @@ class Dydebug(_PluginBase):
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
                     if self._my_send:
-                        self._my_send.send("企业微信登录二维码", content=None, image=img_src, force_send=False)
+                        result = self._my_send.send("企业微信登录二维码", content=None, image=img_src, force_send=False)
+                        if result:
+                            logger.info(f"二维码发送失败，原因：{result}")
+                            browser.close()
+                            return
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)  # 等待用户扫码
@@ -415,7 +423,7 @@ class Dydebug(_PluginBase):
 
     def _update_cookie(self, page, context):
         self._future_timestamp = 0  # 标记二维码失效
-        PyCookieCloud.save_cookie_lifetime(0)  # 重置cookie存活时间
+        PyCookieCloud.save_cookie_lifetime(self._settings_file_path, 0)  # 重置cookie存活时间
         if self._use_cookiecloud:
             if not self._cc_server:  # 连接失败返回 False
                 self.try_connect_cc()  # 再尝试一次连接
@@ -504,16 +512,20 @@ class Dydebug(_PluginBase):
                 if not self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = False
                     if self._my_send:
-                        self._my_send.send(title="cookie已失效",
-                                           content="请使用/push_qr刷新cookie",
+                        result = self._my_send.send(title="cookie已失效",
+                                           content="如果配置了通知方式，请使用/push_qr刷新cookie",
                                            image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                        if result:
+                            logger.info(f"cookie失效通知发送失败，原因：{result}")
+                            browser.close()
+                            return
                 else:
                     self._cookie_valid = True
                     if self._my_send:
                         self._my_send.reset_limit()
-                    logger.info("cookie已经恢复")
-                    PyCookieCloud.increase_cookie_lifetime(1200)
-                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
+                    # logger.info("cookie已经恢复")
+                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
+                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
         except Exception as e:
             logger.error(f"cookie校验失败:{e}")
@@ -611,9 +623,9 @@ class Dydebug(_PluginBase):
                     ip_parts = self._current_ip_address.split('.')
                     masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
                     if self._my_send:
-                        self._my_send.send(title="更新可信IP成功",
+                        result = self._my_send.send(title="更新可信IP成功",
                                            content='应用: ' + app_id + ' 输入IP：' + masked_ip,
-                                    force_send=True, diy_chnnel="WeChat")
+                                           force_send=True, diy_channel="WeChat")
                     # self.post_message(
                     #     mtype=NotificationType.Plugin,
                     #     title="更新可信IP成功",
@@ -780,7 +792,7 @@ class Dydebug(_PluginBase):
                                             'model': 'notification_token',
                                             'label': '[可选] 通知方式',
                                             'rows': 1,
-                                            'placeholder': '使用企微应用填WeChat,兼容Server酱、PushPlus、AnPush'
+                                            'placeholder': '可填写WeChat或Server酱、PushPlus、AnPush等Token或API'
                                         }
                                     }
                                 ]
@@ -843,7 +855,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'cookie失效时通知用户，用户使用/push_qr推送二维码。使用第三方通知时填写对应TOKEN/API即可'
+                                            'text': 'cookie失效时通知用户，用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
                                         }
                                     }
                                 ]
@@ -1013,7 +1025,11 @@ class Dydebug(_PluginBase):
                 if image_src:
                     if self._my_send:
                         # logger.info(f"远程推送任务: {image_src}")
-                        self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
+                        result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
+                        if result:
+                            logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
+                            browser.close()
+                            return
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
@@ -1023,9 +1039,10 @@ class Dydebug(_PluginBase):
                             # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
-                        logger.warning("远程推送任务: 未配置pushplus_token和helloimg_s_token")
+                        logger.warning("远程推送任务: 任何通知方式")
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
+                browser.close()
         except Exception as e:
             logger.error(f"远程推送任务: 推送二维码失败: {e}")
 
