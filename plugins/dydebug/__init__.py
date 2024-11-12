@@ -1003,7 +1003,7 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
-                    if self._notification_token:  # 填写了通知token
+                    if self._my_send.init_success:
                         self._my_send.send("企业微信登录二维码", content=refuse_time, image=image_src, force_send=False)
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
