@@ -1,9 +1,9 @@
 {
     "Dydebug": {
     "name": "假的修改debug",
-    "description":  "依赖cookie修改可信IP，当填写两个token时手机微信可以更新cookie。验证码以？结尾发给企业微信应用。如：110301？",
+    "description":  "修改企微应用可信IP，可本地扫码刷新Cookie，支持第三方推送。验证码以？结尾发送到企业微信应用",
     "labels": "消息通知",
-    "version": "1.1.14",
+    "version": "1.1.15",
     "icon": "Wecom_A.png",
     "author": "RamenRa",
     "level": 2,
