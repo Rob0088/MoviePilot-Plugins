@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.2.3"
+    plugin_version = "1.2.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -42,6 +42,8 @@ class Dydebug(_PluginBase):
     plugin_order = 47
     # 可使用的用户级别
     auth_level = 2
+    # 检测间隔时间,默认10分钟
+    _refresh_cron = '*/5 * * * *'
 
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
@@ -70,8 +72,7 @@ class Dydebug(_PluginBase):
     _current_ip_address = '0.0.0.0'
     # 企业微信登录
     _wechatUrl = 'https://work.weixin.qq.com/wework_admin/loginpage_wx?from=myhome'
-    # 检测间隔时间,默认10分钟
-    _refresh_cron = '*/20 * * * *'
+
     # 输入的企业应用id
     _input_id_list = ''
     # 二维码
@@ -267,11 +268,13 @@ class Dydebug(_PluginBase):
                 return
 
         logger.info("开始检测公网IP")
-        if self.CheckIP():
-            self.ChangeIP()
-            self.__update_config()
-
-        logger.info("----------------------本次任务结束----------------------")
+        if self._cookie_valid:
+            if self.CheckIP():
+                self.ChangeIP()
+                self.__update_config()
+            logger.info("----------------------本次任务结束----------------------")
+        else:
+            logger.warning("cookie已失效请及时更新，本次不检测公网IP")
 
     def CheckIP(self):
         retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
