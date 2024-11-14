@@ -18,26 +18,26 @@ from app.core.event import eventmanager, Event
 from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.plugins.dynamicwechat.update_help import PyCookieCloud
-from app.plugins.dynamicwechat.notify_helper import MySender
+from app.plugins.dydebug.update_help import PyCookieCloud
+from app.plugins.dydebug.notify_helper import MySender
 from app.schemas.types import EventType, NotificationType
 
 
-class DynamicWeChat(_PluginBase):
+class Dydebug(_PluginBase):
     # 插件名称
-    plugin_name = "动态企微可信IP"
+    plugin_name = "debug动态企微可信IP"
     # 插件描述
     plugin_desc = "修改企微应用可信IP，详细说明查看'作者主页'，支持第三方通知。验证码以？结尾发送到企业微信应用"
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.0"
+    plugin_version = "1.1.17"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
-    author_url = "https://github.com/RamenRa/MoviePilot-Plugins"
+    author_url = "https://github.com/Rob0088/MoviePilot-Plugins"
     # 插件配置项ID前缀
-    plugin_config_prefix = "dynamicwechat_"
+    plugin_config_prefix = "dydebug_"
     # 加载顺序
     plugin_order = 47
     # 可使用的用户级别
