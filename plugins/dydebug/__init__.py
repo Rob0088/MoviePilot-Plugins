@@ -631,10 +631,10 @@ class Dydebug(_PluginBase):
             # 检查是否为 V2 微信通知
             if self.version != "v1":  # V2 微信通知
                 # 解析 userid 获取频道和实际 userid
+                if not userid or ',' not in userid:  # v2微信必须指定用户ID
+                    return '没有指定V2微信用户ID'
                 channel, actual_userid = userid.split(',', 1)
                 if channel == "WeChat":
-                    if not userid or ',' not in userid:  # v2微信必须指定用户ID
-                        return '没有指定V2微信用户ID'
                     # 使用解析后的 actual_userid 发送通知
                     self.post_message(
                         mtype=NotificationType.Plugin,
@@ -1059,7 +1059,8 @@ class Dydebug(_PluginBase):
                         if image_src:
                             self.send_message(
                                 title="企业微信登录二维码",
-                                image=image_src
+                                image=image_src,
+                                userid=self._notification_token
                             )
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
@@ -1140,4 +1141,3 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
