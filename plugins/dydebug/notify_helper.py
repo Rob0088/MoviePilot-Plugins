@@ -1,7 +1,7 @@
 import re
 import requests
 
-from app.modules.wechat.wechat import WeChat
+from app.modules.wechat import WeChat
 from app.core.config import settings
 
 class MySender:
