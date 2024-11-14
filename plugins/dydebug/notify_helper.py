@@ -54,7 +54,7 @@ class MySender:
                 channel = diy_channel
 
             if channel == "WeChat":
-                return MySender.send_wechat(title, content, image)
+                return self.send_wechat(title, content, image)
             elif channel == "ServerChan":
                 return self.send_serverchan(title, content, image)
             elif channel == "AnPush":
