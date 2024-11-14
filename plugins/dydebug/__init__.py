@@ -25,7 +25,7 @@ from app.schemas.types import EventType
 
 class Dydebug(_PluginBase):
     # 插件名称
-    plugin_name = "debug动态企微可信IP"
+    plugin_name = "debug动信IP"
     # 插件描述
     plugin_desc = "修改企微应用可信IP，详细说明查看'作者主页'，支持第三方通知。验证码以？结尾发送到企业微信应用"
     # 插件图标
