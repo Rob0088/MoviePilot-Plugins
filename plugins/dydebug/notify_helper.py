@@ -1,7 +1,8 @@
 import re
 import requests
-from app.modules.wechat.wechat import WeChat
 
+from app.modules.wechat.wechat import WeChat
+from app.core.config import settings
 
 class MySender:
     def __init__(self, token=None):
@@ -15,6 +16,7 @@ class MySender:
             self.first_text_sent = False  # 记录是否已经发送过纯文本消息
             self.init_success = True  # 标识初始化成功
 
+
     def send_channel(self):
         if self.token:
             if self.token == "WeChat":
@@ -22,7 +24,7 @@ class MySender:
 
             letters_only = ''.join(re.findall(r'[A-Za-z]', self.token))
             # 判断其他推送渠道
-            if self.token.startswith("SCT"):
+            if self.token.lower().startswith("sct".lower()):
                 return "ServerChan"
             elif letters_only.isupper():
                 return "AnPush"
@@ -64,7 +66,17 @@ class MySender:
 
     @staticmethod
     def send_wechat(title, content, image):
-        wechat = WeChat()
+        if hasattr(settings, 'VERSION_FLAG'):
+            version = settings.VERSION_FLAG  # V2
+        else:
+            version = "v1"
+        if version != "v1":
+            wechat = WeChat(settings.WECHAT_CORPID,
+                            settings.WECHAT_APP_SECRET,
+                            settings.WECHAT_APP_ID,
+                            settings.WECHAT_PROXY)
+        else:
+            wechat = WeChat()
         if image:
             send_status = wechat.send_msg(title='企业微信登录二维码', image=image, link=image)
         else:
