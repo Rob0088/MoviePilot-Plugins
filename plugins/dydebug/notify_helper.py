@@ -1,11 +1,9 @@
 import re
 import requests
-
 from app.modules.wechat import WeChat
-from app.core.config import settings
 
 class MySender:
-    def __init__(self, token=None):
+    def __init__(self, token=None, _CORPID=None, _APP_SECRET=None, _APP_ID=None, _PROXY=None):
         if not token:  # 如果 token 为空
             self.token = None
             self.channel = None
@@ -15,6 +13,10 @@ class MySender:
             self.channel = self.send_channel()  # 初始化时确定发送渠道
             self.first_text_sent = False  # 记录是否已经发送过纯文本消息
             self.init_success = True  # 标识初始化成功
+        self._CORPID = _CORPID
+        self._APP_SECRET = _APP_SECRET
+        self._APP_ID = _APP_ID
+        self._PROXY = _PROXY
 
 
     def send_channel(self):
@@ -64,17 +66,9 @@ class MySender:
         except Exception as e:
             return f"Error occurred: {str(e)}"
 
-    @staticmethod
-    def send_wechat(title, content, image):
-        if hasattr(settings, 'VERSION_FLAG'):
-            version = settings.VERSION_FLAG  # V2
-        else:
-            version = "v1"
-        if version != "v1":
-            wechat = WeChat(settings.WECHAT_CORPID,
-                            settings.WECHAT_APP_SECRET,
-                            settings.WECHAT_APP_ID,
-                            settings.WECHAT_PROXY)
+    def send_wechat(self, title, content, image):
+        if self._CORPID and self._APP_SECRET and self._APP_ID:
+            wechat = WeChat(self._CORPID, self._APP_SECRET, self._APP_ID, self._PROXY)
         else:
             wechat = WeChat()
         if image:
