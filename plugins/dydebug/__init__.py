@@ -128,7 +128,7 @@ class Dydebug(_PluginBase):
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
         if self.version != "v1":
-            self._my_send = MySender(self._notification_token, fun=self.post_message())
+            self._my_send = MySender(self._notification_token, func=self.post_message)
             logger.info("MP是V2")
         else:
             self._my_send = MySender(self._notification_token)
