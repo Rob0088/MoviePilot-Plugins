@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.17"
+    plugin_version = "1.1.18"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -104,9 +104,9 @@ class Dydebug(_PluginBase):
     else:
         version = "v1"
     if version != "v1":
-        _CORPID = settings.WECHAT_CORPID,
-        _APP_SECRET = settings.WECHAT_APP_SECRET,
-        _APP_ID = settings.WECHAT_APP_ID,
+        _CORPID = settings.WECHAT_CORPID
+        _APP_SECRET = settings.WECHAT_APP_SECRET
+        _APP_ID = settings.WECHAT_APP_ID
         _PROXY = settings.WECHAT_PROXY
 
     def init_plugin(self, config: dict = None):
