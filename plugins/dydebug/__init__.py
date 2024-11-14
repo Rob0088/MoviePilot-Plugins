@@ -1029,7 +1029,7 @@ class Dydebug(_PluginBase):
                             result = self.post_message(mtype=NotificationType.Plugin,
                                                        title="企业微信登录二维码", 
                                                        text=None, 
-                                                       wechat_userid='',
+                                                       userid='PanWenSong',
                                                        image=image_src,link=image_src)
                         else:
                             result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
