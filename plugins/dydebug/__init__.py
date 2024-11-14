@@ -18,28 +18,28 @@ from app.core.event import eventmanager, Event
 from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.plugins.dydebug.update_help import PyCookieCloud
-from app.plugins.dydebug.notify_helper import MySender
+from app.plugins.dynamicwechat.update_help import PyCookieCloud
+from app.plugins.dynamicwechat.notify_helper import MySender
 from app.schemas.types import EventType, NotificationType
-# from app.modules.wechat.wechat import WeChat
 
-class Dydebug(_PluginBase):
+
+class DynamicWeChat(_PluginBase):
     # 插件名称
-    plugin_name = "假的修改debug"
+    plugin_name = "动态企微可信IP"
     # 插件描述
-    plugin_desc = "修改企微应用可信IP，可本地扫码刷新Cookie，支持第三方推送。验证码以？结尾发送到企业微信应用"
+    plugin_desc = "修改企微应用可信IP，详细说明查看'作者主页'，支持第三方通知。验证码以？结尾发送到企业微信应用"
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.16"
+    plugin_version = "1.5.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
-    author_url = "https://github.com/Rob0088/MoviePilot-Plugins/"
+    author_url = "https://github.com/RamenRa/MoviePilot-Plugins"
     # 插件配置项ID前缀
-    plugin_config_prefix = "dydebug_"
+    plugin_config_prefix = "dynamicwechat_"
     # 加载顺序
-    plugin_order = 8
+    plugin_order = 47
     # 可使用的用户级别
     auth_level = 2
 
@@ -59,7 +59,7 @@ class Dydebug(_PluginBase):
     _is_special_upload = False
     # 聚合通知
     _my_send = None
-    # 通知方式
+    # 通知方式token/api
     _notification_token = ''
 
     # 匹配ip地址的正则
@@ -99,6 +99,16 @@ class Dydebug(_PluginBase):
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
 
+    if hasattr(settings, 'VERSION_FLAG'):
+        version = settings.VERSION_FLAG  # V2
+    else:
+        version = "v1"
+    if version != "v1":
+        _CORPID = settings.WECHAT_CORPID,
+        _APP_SECRET = settings.WECHAT_APP_SECRET,
+        _APP_ID = settings.WECHAT_APP_ID,
+        _PROXY = settings.WECHAT_PROXY
+
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._notification_token = ''
@@ -123,7 +133,10 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        self._my_send = MySender(self._notification_token)
+        if self.version != "v1":  # 是V2
+            self._my_send = MySender(self._notification_token, self._CORPID, self._APP_SECRET, self._APP_ID, self._PROXY)
+        else:
+            self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
         # 停止现有任务
