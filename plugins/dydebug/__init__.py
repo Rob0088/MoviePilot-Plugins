@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.2.1"
+    plugin_version = "1.2.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -127,7 +127,11 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        self._my_send = MySender(self._notification_token)
+        if self.version != "v1":
+            self._my_send = MySender(self._notification_token, fun=self.post_message())
+            logger.info("MP是V2")
+        else:
+            self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
         # 停止现有任务
@@ -385,10 +389,11 @@ class Dydebug(_PluginBase):
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
                     if self._my_send:
-                        self.send_message(
-                            title="企业微信登录二维码",
-                            image=img_src
-                        )
+                        result = self._my_send.send(title="企业微信登录二维码", content=None, image=img_src, force_send=False)
+                        if result:
+                            logger.info(f"二维码发送失败，原因：{result}")
+                            browser.close()
+                            return
                         logger.info("二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)  # 等待用户扫码
@@ -506,12 +511,12 @@ class Dydebug(_PluginBase):
                     time.sleep(3)
                     if not self.check_login_status(page, task='refresh_cookie'):
                         self._cookie_valid = False
-                        self.send_message(
-                            title="cookie已失效，请及时更新",
-                            content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动"
-                        )
-                        # if result:
-                        #     logger.info(f"cookie失效通知发送失败，原因：{result}")
+                        if self._my_send:
+                            result = self._my_send.send(title="cookie已失效，请及时更新",
+                                                        content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
+                                                        image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                            if result:
+                                logger.info(f"cookie失效通知发送失败，原因：{result}")
                     else:
                         self._cookie_valid = True
                         if self._my_send:
@@ -614,63 +619,14 @@ class Dydebug(_PluginBase):
                     logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
                     ip_parts = self._current_ip_address.split('.')
                     masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
-                    self.send_message(
-                        title="更新可信IP成功",
-                        content=f'应用: {app_id} 输入IP：{masked_ip}',
-                        force_send=True,
-                        userid=self._notification_token  # 如果需要指定userid
-                    )
+                    if self._my_send:
+                        result = self._my_send.send(title="更新可信IP成功",
+                                                    content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                                                    force_send=True, diy_channel="WeChat")
             return
-
-    def send_message(self, title, content=None, image=None, force_send=False, userid=None):
-        '''
-        发送成功返回 None
-        失败返回错误信息，V2微信没有返回内容，默认成功
-        '''
-        if self._my_send:
-            # 检查是否为 V2 微信通知
-            if self.version != "v1":  # V2 微信通知
-                # 解析 userid 获取频道和实际 userid
-                if not userid or ',' not in userid:  # v2微信必须指定用户ID
-                    return '没有指定V2微信用户ID'
-                channel, actual_userid = userid.split(',', 1)
-                if channel == "WeChat":
-                    # 使用解析后的 actual_userid 发送通知
-                    self.post_message(
-                        mtype=NotificationType.Plugin,
-                        title=title,
-                        text=content,
-                        image=image,
-                        link=image,
-                        userid=actual_userid
-                    )
-                    return None
-                else:
-                    # 非微信通知
-                    result = self._my_send.send(
-                        title=title,
-                        content=content,
-                        image=image,
-                        force_send=force_send
-                    )
-                    if result:
-                        logger.info(f"{title} 发送失败，原因：{result}")
-                        return result
-                    else:
-                        return None
-            else:
-                # 非 V2 微信通知，使用 _my_send 发送消息
-                result = self._my_send.send(
-                    title=title,
-                    content=content,
-                    image=image,
-                    force_send=force_send
-                )
-                if result:
-                    logger.info(f"{title} 发送失败，原因：{result}")
-                    return result
-                else:
-                    return None
+        else:
+            logger.error("未找到应用id，修改IP失败")
+            return
 
     def __update_config(self):
         """
@@ -1056,21 +1012,22 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        if image_src:
-                            self.send_message(
-                                title="企业微信登录二维码",
-                                image=image_src,
-                                userid=self._notification_token
-                            )
+                        # logger.info(f"远程推送任务: {image_src}")
+                        result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
+                        if result:
+                            logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
+                            browser.close()
+                            return
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
                         login_status = self.check_login_status(page, 'push_qr_code')
                         if login_status:
                             self._update_cookie(page, context)  # 刷新cookie
+                            # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
-                        logger.warning("远程推送任务: 没有可用的通知方式")
+                        logger.warning("远程推送任务: 任何通知方式")
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
                 browser.close()
