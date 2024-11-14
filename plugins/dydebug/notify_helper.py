@@ -15,10 +15,9 @@ class MySender:
     def send_channel(self):
         if "WeChat" in self.token:
             return "WeChat"
-        # elf self.token
+
         letters_only = ''.join(re.findall(r'[A-Za-z]', self.token))
-        # 判断其他推送渠道
-        if self.token.startswith("SCT"):
+        if self.token.lower().startswith("sct".lower()):
             return "ServerChan"
         elif letters_only.isupper():
             return "AnPush"
@@ -36,7 +35,7 @@ class MySender:
             else:
                 self.first_text_sent = True
 
-        # # 如果是 V2 微信通知 要传入 self.post_message
+        # # 如果是 V2 微信通知直接处理
         if self.channel == "WeChat" and self.post_message_func:
             return self.send_v2_wechat(title, content, image)
 
@@ -47,7 +46,7 @@ class MySender:
                 channel = diy_channel
 
             if channel == "WeChat":
-                return MySender.send_wechat(title, content, image)
+                return MySender.send_wechat(title, content, image, self.token)
             elif channel == "ServerChan":
                 return self.send_serverchan(title, content, image)
             elif channel == "AnPush":
@@ -60,10 +59,14 @@ class MySender:
             return f"Error occurred: {str(e)}"
 
     @staticmethod
-    def send_wechat(title, content, image):
+    def send_wechat(title, content, image, token):
         wechat = WeChat()
+        if ',' in token:
+            channel, actual_userid = token.split(',', 1)
+        else:
+            actual_userid = None
         if image:
-            send_status = wechat.send_msg(title='企业微信登录二维码', image=image, link=image)
+            send_status = wechat.send_msg(title='企业微信登录二维码', image=image, link=image, userid=actual_userid)
         else:
             send_status = wechat.send_msg(title=title, text=content)
 
