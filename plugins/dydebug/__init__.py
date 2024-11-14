@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.19"
+    plugin_version = "1.1.20"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -103,12 +103,6 @@ class Dydebug(_PluginBase):
         version = settings.VERSION_FLAG  # V2
     else:
         version = "v1"
-    if version != "v1":
-        _CORPID = settings.WECHAT_CORPID
-        _APP_SECRET = settings.WECHAT_APP_SECRET
-        _APP_ID = settings.WECHAT_APP_ID
-        _PROXY = settings.WECHAT_PROXY
-
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._notification_token = ''
@@ -133,10 +127,7 @@ class Dydebug(_PluginBase):
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
-        if self.version != "v1":  # 是V2
-            self._my_send = MySender(self._notification_token, self._CORPID, self._APP_SECRET, self._APP_ID, self._PROXY)
-        else:
-            self._my_send = MySender(self._notification_token)
+        self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
         # 停止现有任务
@@ -394,7 +385,13 @@ class Dydebug(_PluginBase):
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
                     if self._my_send:
-                        result = self._my_send.send("企业微信登录二维码", content=None, image=img_src, force_send=False)
+                        if self.version != "v1" and self._notification_token == "WeChat":  # V2 微信通知
+                            result = self.post_message(mtype=NotificationType.Plugin,
+                                                       title="企业微信登录二维码", 
+                                                       text=None, 
+                                                       image=img_src, link=img_src)
+                        else:
+                            result = self._my_send.send("企业微信登录二维码", content=None, image=img_src, force_send=False)
                         if result:
                             logger.info(f"二维码发送失败，原因：{result}")
                             browser.close()
@@ -517,9 +514,14 @@ class Dydebug(_PluginBase):
                     if not self.check_login_status(page, task='refresh_cookie'):
                         self._cookie_valid = False
                         if self._my_send:
-                            result = self._my_send.send(title="cookie已失效，请及时更新",
-                                                        content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
-                                                        image=None, force_send=False)  # 标题，内容，图片，是否强制发送
+                            if self.version != "v1" and self._notification_token == "WeChat":  # V2 微信通知
+                                result = self.post_message(mtype=NotificationType.Plugin,
+                                                           title="cookie已失效，请及时更新",
+                                                           text="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",)
+                            else:
+                                result = self._my_send.send(title="cookie已失效，请及时更新",
+                                                            content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
+                                                            image=None, force_send=False)  # 标题，内容，图片，是否强制发送
                             if result:
                                 logger.info(f"cookie失效通知发送失败，原因：{result}")
                     else:
@@ -625,9 +627,14 @@ class Dydebug(_PluginBase):
                     ip_parts = self._current_ip_address.split('.')
                     masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
                     if self._my_send:
-                        result = self._my_send.send(title="更新可信IP成功",
-                                                    content='应用: ' + app_id + ' 输入IP：' + masked_ip,
-                                                    force_send=True, diy_channel="WeChat")
+                        if self.version != "v1" and self._notification_token == "WeChat":  # V2 微信通知
+                            result = self.post_message(mtype=NotificationType.Plugin,
+                                                       title="更新可信IP成功", 
+                                                       text='应用: ' + app_id + ' 输入IP：' + masked_ip)
+                        else:
+                            result = self._my_send.send(title="更新可信IP成功",
+                                                        content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                                                        force_send=True, diy_channel="WeChat")
             return
         else:
             logger.error("未找到应用id，修改IP失败")
@@ -1018,7 +1025,13 @@ class Dydebug(_PluginBase):
                 if image_src:
                     if self._my_send:
                         # logger.info(f"远程推送任务: {image_src}")
-                        result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
+                        if self.version != "v1" and self._notification_token == "WeChat":  # V2 微信通知
+                            result = self.post_message(mtype=NotificationType.Plugin,
+                                                       title="企业微信登录二维码", 
+                                                       text=None, 
+                                                       image=image_src,link=image_src)
+                        else:
+                            result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
                         if result:
                             logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
                             browser.close()
