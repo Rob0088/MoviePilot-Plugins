@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.1.20"
+    plugin_version = "1.1.21"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1029,6 +1029,7 @@ class Dydebug(_PluginBase):
                             result = self.post_message(mtype=NotificationType.Plugin,
                                                        title="企业微信登录二维码", 
                                                        text=None, 
+                                                       wechat_userid='',
                                                        image=image_src,link=image_src)
                         else:
                             result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
