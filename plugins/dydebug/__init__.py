@@ -110,7 +110,6 @@ class Dydebug(_PluginBase):
         self._ip_changed = True
         self._forced_update = False
         self._use_cookiecloud = True
-        self._cron = '*/8 * * * *'
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
@@ -120,13 +119,13 @@ class Dydebug(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
+            self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
-            self._cron = config.get("cron")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
         if self.version != "v1":
