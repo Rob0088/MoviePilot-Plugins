@@ -47,7 +47,7 @@ class Dydebug(_PluginBase):
 
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
-    _cron = '*/8 * * * *'
+    _cron = None
     _onlyonce = False
     # IP更改成功状态
     _ip_changed = False
@@ -110,6 +110,7 @@ class Dydebug(_PluginBase):
         self._ip_changed = True
         self._forced_update = False
         self._use_cookiecloud = True
+        self._cron = '*/8 * * * *'
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
@@ -126,6 +127,7 @@ class Dydebug(_PluginBase):
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
+            self._cron = config.get("cron")
             self._cookie_header = config.get("cookie_header")
             self._ip_changed = config.get("ip_changed")
         if self.version != "v1":
@@ -645,6 +647,7 @@ class Dydebug(_PluginBase):
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
             "cookie_header": self._cookie_header,
+            "cron":self._cron
             "use_cookiecloud": self._use_cookiecloud,
         })
 
