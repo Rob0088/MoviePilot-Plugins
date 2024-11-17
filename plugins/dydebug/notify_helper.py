@@ -7,14 +7,14 @@ from app.schemas.types import NotificationType
 class MySender:
     def __init__(self, token=None, func=None):
         self.tokens = token.split('||') if token and '||' in token else [token] if token else []
-        self.channels = [self.detect_channel(t) for t in self.tokens]
+        self.channels = [MySender._detect_channel(t) for t in self.tokens]
         self.current_index = 0  # 当前使用的 token 和 channel 的索引
         self.first_text_sent = False  # 是否已发送过纯文本消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
-        
+
     @staticmethod
-    def detect_channel(token):
+    def _detect_channel(token):
         """根据 token 确定通知渠道"""
         if "WeChat" in token:
             return "WeChat"
@@ -40,14 +40,14 @@ class MySender:
 
         # 如果指定了自定义通道，直接尝试发送
         if diy_channel:
-            return self.try_send(title, content, image, diy_channel)
+            return self._try_send(title, content, image, diy_channel)
 
         # 尝试按顺序发送，直到成功或遍历所有通道
         for i in range(len(self.tokens)):
             token = self.tokens[self.current_index]
             channel = self.channels[self.current_index]
             try:
-                result = self.try_send(title, content, image, channel, token)
+                result = self._try_send(title, content, image, channel, token)
                 if result is None:  # 成功时返回 None
                     return
             except Exception as e:
@@ -59,23 +59,23 @@ class MySender:
 
         return "所有的通知方式都发送失败"
 
-    def try_send(self, title, content, image, channel, token=None):
+    def _try_send(self, title, content, image, channel, token=None):
         """尝试使用指定通道发送消息"""
         if channel == "WeChat" and self.post_message_func:
-            return self.send_v2_wechat(title, content, image, token)
+            return self._send_v2_wechat(title, content, image, token)
         elif channel == "WeChat":
-            return self.send_wechat(title, content, image, token)
+            return self._send_wechat(title, content, image, token)
         elif channel == "ServerChan":
-            return self.send_serverchan(title, content, image)
+            return self._send_serverchan(title, content, image)
         elif channel == "AnPush":
-            return self.send_anpush(title, content, image)
+            return self._send_anpush(title, content, image)
         elif channel == "PushPlus":
-            return self.send_pushplus(title, content, image)
+            return self._send_pushplus(title, content, image)
         else:
             raise ValueError(f"Unknown channel: {channel}")
 
     @staticmethod
-    def send_wechat(title, content, image, token):
+    def _send_wechat(title, content, image, token):
         wechat = WeChat()
         if ',' in token:
             channel, actual_userid = token.split(',', 1)
@@ -90,7 +90,7 @@ class MySender:
             return "微信通知发送错误"
         return None
 
-    def send_serverchan(self, title, content, image):
+    def _send_serverchan(self, title, content, image):
         token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         if token.startswith('sctp'):
             match = re.match(r'sctp(\d+)t', token)
@@ -110,12 +110,12 @@ class MySender:
             return f"Server酱通知错误: {result.get('message')}"
         return None
 
-    def send_anpush(self, title, content, image):
+    def _send_anpush(self, title, content, image):
         token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         if ',' in token:
             channel, token = token.split(',', 1)
         else:
-            return
+            return "可能AnPush 没有配置消息通道ID"
         url = f"https://api.anpush.com/push/{token}"
         payload = {
             "title": title,
@@ -132,7 +132,7 @@ class MySender:
             return "AnPush 消息通道未找到"
         return None
 
-    def send_pushplus(self, title, content, image):
+    def _send_pushplus(self, title, content, image):
         token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         pushplus_url = f"http://www.pushplus.plus/send/{token}"
         # PushPlus发送逻辑
@@ -147,12 +147,12 @@ class MySender:
             return f"PushPlus send failed: {result.get('msg')}"
         return None
 
-    def send_v2_wechat(self, title, content, image, token):
+    def _send_v2_wechat(self, title, content, image, token):
         """V2 微信通知发送"""
         if not token or ',' not in token:
             return '没有指定V2微信用户ID'
         channel, actual_userid = token.split(',', 1)
-        statsu = self.post_message_func(
+        self.post_message_func(
             mtype=NotificationType.Plugin,
             title=title,
             text=content,
@@ -160,7 +160,7 @@ class MySender:
             link=image,
             userid=actual_userid
         )
-        return statsu
+        return None  # 由于self.post_message()了None外，没有其他返回值。无法判断是否发送成功，V2直接默认成功
 
     def reset_limit(self):
         """解除限制，允许再次发送纯文本消息"""
