@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.2.8"
+    plugin_version = "1.2.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -120,7 +120,6 @@ class Dydebug(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
-            self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
             self._current_ip_address = config.get("current_ip_address")
@@ -647,7 +646,6 @@ class Dydebug(_PluginBase):
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
             "cookie_header": self._cookie_header,
-            "cron":self._cron
             "use_cookiecloud": self._use_cookiecloud,
         })
 
