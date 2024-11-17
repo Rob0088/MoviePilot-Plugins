@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.2.7"
+    plugin_version = "1.2.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -47,7 +47,7 @@ class Dydebug(_PluginBase):
 
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
-    _cron = None
+    _cron = '*/8 * * * *'
     _onlyonce = False
     # IP更改成功状态
     _ip_changed = False
@@ -130,7 +130,6 @@ class Dydebug(_PluginBase):
             self._ip_changed = config.get("ip_changed")
         if self.version != "v1":
             self._my_send = MySender(self._notification_token, func=self.post_message)
-            logger.info("MP是V2")
         else:
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
@@ -267,14 +266,14 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
 
-        logger.info("开始检测公网IP")
         if self._cookie_valid:
+            logger.info("开始检测公网IP")
             if self.CheckIP():
                 self.ChangeIP()
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
         else:
-            logger.warning("cookie已失效请及时更新，本次不检测公网IP")
+            logger.warning("cookie已失效请及时更新，不检测公网IP")
 
     def CheckIP(self):
         retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
@@ -392,7 +391,7 @@ class Dydebug(_PluginBase):
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
                     if self._my_send:
-                        result = self._my_send.send(title="企业微信登录二维码", content=None, image=img_src, force_send=False)
+                        result = self._my_send.send(title="企业微信登录二维码", image=img_src)
                         if result:
                             logger.info(f"二维码发送失败，原因：{result}")
                             browser.close()
@@ -826,7 +825,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱、PushPlus、AnPush，具体请查看作者主页'
+                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱等第三方通知，具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -846,7 +845,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'cookie失效时通知用户，用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
+                                            'text': 'Cookie失效时通知用户，用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
                                         }
                                     }
                                 ]
@@ -1015,8 +1014,7 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        # logger.info(f"远程推送任务: {image_src}")
-                        result = self._my_send.send("企业微信登录二维码", content=None, image=image_src, force_send=False)
+                        result = self._my_send.send("企业微信登录二维码", image=image_src)
                         if result:
                             logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
                             browser.close()
@@ -1030,7 +1028,7 @@ class Dydebug(_PluginBase):
                             # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
-                        logger.warning("远程推送任务: 任何通知方式")
+                        logger.warning("远程推送任务: 没有找到可用的通知方式")
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
                 browser.close()
@@ -1043,7 +1041,7 @@ class Dydebug(_PluginBase):
             {
                 "cmd": "/push_qr",
                 "event": EventType.PluginAction,
-                "desc": "立即推送登录二维码到",
+                "desc": "立即推送登录二维码",
                 "category": "",
                 "data": {
                     "action": "push_qrcode"
