@@ -25,13 +25,13 @@ from app.schemas.types import EventType
 
 class Dydebug(_PluginBase):
     # 插件名称
-    plugin_name = "debug动信IP"
+    plugin_name = "动态企微可信IP_Debug"
     # 插件描述
     plugin_desc = "修改企微应用可信IP，详细说明查看'作者主页'，支持第三方通知。验证码以？结尾发送到企业微信应用"
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.3.4"
+    plugin_version = "1.3.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
