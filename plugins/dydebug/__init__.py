@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.2.12"
+    plugin_version = "1.3.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -108,13 +108,11 @@ class Dydebug(_PluginBase):
         # 清空配置
         self._notification_token = ''
         self._ip_changed = True
-        self._cron = '*/10 * * * *'
         self._forced_update = False
         self._use_cookiecloud = True
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
-        self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         self._settings_file_path = self.get_data_path() / "settings.json"
         # self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         if config:
@@ -139,6 +137,7 @@ class Dydebug(_PluginBase):
             parts = self.input_id_list.split("||", 1)
             self._input_id_list = parts[0]
             self._ip_urls = parts[1]
+        self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
