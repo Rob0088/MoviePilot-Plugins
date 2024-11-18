@@ -104,18 +104,17 @@ class Dydebug(_PluginBase):
         version = settings.VERSION_FLAG  # V2
     else:
         version = "v1"
+
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._notification_token = ''
         self._ip_changed = True
         self._forced_update = False
         self._use_cookiecloud = True
-        self._cron = '*/5 * * * *'
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
         self._settings_file_path = self.get_data_path() / "settings.json"
-        # self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime()
         if config:
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
@@ -136,7 +135,6 @@ class Dydebug(_PluginBase):
             self._my_send = None
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
-            self._input_id_list = parts[0]
             self._ip_urls = parts[1].split(",")
         self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         # 停止现有任务
@@ -281,7 +279,12 @@ class Dydebug(_PluginBase):
             logger.warning("cookie已失效请及时更新，不检测公网IP")
 
     def CheckIP(self):
-        retry_urls = random.sample(self._ip_urls, len(self._ip_urls))
+        if "||" in self._input_id_list:
+            parts = self._input_id_list.split("||", 1)
+            ip_urls = parts[1].split(",")
+        else:
+            ip_urls = self._ip_urls
+        retry_urls = random.sample(ip_urls, len(ip_urls))
         ip_address = None
 
         for url in retry_urls:
@@ -596,7 +599,12 @@ class Dydebug(_PluginBase):
                 "配置")
         ]
         if self._input_id_list:
-            id_list = self._input_id_list.split(",")
+            if "||" in self._input_id_list:
+                parts = self._input_id_list.split("||", 1)
+                input_id_list = parts[0]
+            else:
+                input_id_list = self._input_id_list
+            id_list = input_id_list.split(",")
             app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
             for app_url in app_urls:
                 page.goto(app_url)  # 打开应用详情页
@@ -634,7 +642,7 @@ class Dydebug(_PluginBase):
         else:
             logger.error("未找到应用id，修改IP失败")
             return
-
+            
     def __update_config(self):
         """
         更新配置
