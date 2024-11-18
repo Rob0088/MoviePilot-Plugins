@@ -110,6 +110,7 @@ class Dydebug(_PluginBase):
         self._ip_changed = True
         self._forced_update = False
         self._use_cookiecloud = True
+        self._cron = '*/10 * * * *'
         self._local_scan = False
         self._input_id_list = ''
         self._cookie_header = ""
