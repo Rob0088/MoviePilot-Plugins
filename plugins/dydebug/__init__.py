@@ -134,6 +134,10 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
+        if "||" in self._input_id_list:
+            parts = self.input_id_list.split("||", 1)
+            self._input_id_list = parts[0]
+            self._ip_urls = parts[1]
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
