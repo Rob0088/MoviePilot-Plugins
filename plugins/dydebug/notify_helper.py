@@ -1,7 +1,7 @@
 import re
 import requests
 from app.modules.wechat import WeChat
-from app.schemas.types import NotificationType
+from app.schemas.types import NotificationType,MessageChannel
 
 
 class MySender:
@@ -149,10 +149,12 @@ class MySender:
 
     def _send_v2_wechat(self, title, content, image, token):
         """V2 微信通知发送"""
-        if not token or ',' not in token:
-            return '没有指定V2微信用户ID'
-        channel, actual_userid = token.split(',', 1)
+        if ',' in token:
+            channel, actual_userid = token.split(',', 1)
+        else:
+            actual_userid = None
         self.post_message_func(
+            channel=MessageChannel.Wechat,
             mtype=NotificationType.Plugin,
             title=title,
             text=content,
