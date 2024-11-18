@@ -108,6 +108,7 @@ class Dydebug(_PluginBase):
         # 清空配置
         self._notification_token = ''
         self._ip_changed = True
+        self._cron = '*/10 * * * *'
         self._forced_update = False
         self._use_cookiecloud = True
         self._local_scan = False
