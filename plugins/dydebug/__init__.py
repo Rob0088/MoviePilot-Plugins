@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.3.3"
+    plugin_version = "1.3.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -135,11 +135,9 @@ class Dydebug(_PluginBase):
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
         if "||" in self._input_id_list:
-            # logger.info(f"使用多个应用{self._input_id_list}")
             parts = self._input_id_list.split("||", 1)
             self._input_id_list = parts[0]
-            self._ip_urls = parts[1]
-            logger.info(f"拆分后的IP {self._ip_urls}")
+            self._ip_urls = parts[1].split(",")
         self._current_ip_address = self.get_ip_from_url(random.choice(self._ip_urls))
         # 停止现有任务
         self.stop_service()
