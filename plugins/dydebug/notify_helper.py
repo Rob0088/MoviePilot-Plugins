@@ -91,14 +91,24 @@ class MySender:
         return None
 
     def _send_serverchan(self, title, content, image):
-        token = self.tokens[self.current_index]  # 获取当前通道对应的 token
+        tmp_tokens = self.tokens[self.current_index]
+        token = tmp_tokens
+        if ',' in tmp_tokens:
+            before_comma, after_comma = tmp_tokens.split(',', 1)
+
+            # 根据是否有图片选择 token
+            if before_comma.startswith('sctp') and image:
+                token = after_comma  # 图片发到公众号
+            else:
+                token = before_comma  # 发到 server3
+
         if token.startswith('sctp'):
             match = re.match(r'sctp(\d+)t', token)
             if match:
                 num = match.group(1)
                 url = f'https://{num}.push.ft07.com/send/{token}.send'
             else:
-                raise ValueError('Invalid sendkey format for sctp')
+                return '错误的Server3 Sendkey'
         else:
             url = f'https://sctapi.ftqq.com/{token}.send'
 
