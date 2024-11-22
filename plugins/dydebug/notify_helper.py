@@ -53,11 +53,9 @@ class MySender:
             except Exception as e:
                 # 打印错误日志或处理错误
                 return f"{channel} 通知错误: {e}"
-
             # 切换到下一个通道
             self.current_index = (self.current_index + 1) % len(self.tokens)
-
-        return "所有的通知方式都发送失败"
+        return f"所有的通知方式都发送失败"
 
     def _try_send(self, title, content, image, channel, token=None):
         """尝试使用指定通道发送消息"""
@@ -77,7 +75,7 @@ class MySender:
     @staticmethod
     def _send_wechat(title, content, image, token):
         wechat = WeChat()
-        if ',' in token:
+        if token and ',' in token:
             channel, actual_userid = token.split(',', 1)
         else:
             actual_userid = None
@@ -159,7 +157,7 @@ class MySender:
 
     def _send_v2_wechat(self, title, content, image, token):
         """V2 微信通知发送"""
-        if ',' in token:
+        if token and ',' in token:
             channel, actual_userid = token.split(',', 1)
         else:
             actual_userid = None
