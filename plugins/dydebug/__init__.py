@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.3.6"
+    plugin_version = "1.4.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -43,7 +43,7 @@ class Dydebug(_PluginBase):
     # 可使用的用户级别
     auth_level = 2
     # 检测间隔时间,默认10分钟
-    _refresh_cron = '*/20 * * * *'
+    _refresh_cron = '*/10 * * * *'
 
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
@@ -438,28 +438,31 @@ class Dydebug(_PluginBase):
                     return
             logger.info("使用二维码登录成功，开始刷新cookie")
             try:
-                if self._cc_server.check_connection():
-                    current_url = page.url
-                    current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-                    if current_cookies is None:
-                        logger.error("无法获取当前 cookies")
-                        return
-                    formatted_cookies = {}
-                    for cookie in current_cookies:
-                        domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
-                        if domain is None:
-                            continue  # 跳过没有 domain 的 cookie
-
-                        if domain not in formatted_cookies:
-                            formatted_cookies[domain] = []
-                        formatted_cookies[domain].append(cookie)
-                    flag = self._cc_server.update_cookie(formatted_cookies)
-                    if flag:
-                        logger.info("更新 CookieCloud 成功")
-                    else:
-                        logger.error("更新 CookieCloud 失败")
-                else:
+                if not self._cc_server.check_connection():
                     logger.error("连接 CookieCloud 失败", self._server)
+                    return
+                current_url = page.url
+                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
+                if current_cookies is None:
+                    logger.error("无法获取当前 cookies")
+                    return
+                self._saved_cookie = current_cookies
+                formatted_cookies = {}
+                for cookie in current_cookies:
+                    domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
+                    if domain is None:
+                        continue  # 跳过没有 domain 的 cookie
+
+                    if domain not in formatted_cookies:
+                        formatted_cookies[domain] = []
+                    formatted_cookies[domain].append(cookie)
+                flag = self._cc_server.update_cookie(formatted_cookies)
+                if flag:
+                    logger.info("更新 CookieCloud 成功")
+                    self.refresh_cookie()
+                else:
+                    logger.error("更新 CookieCloud 失败")
+
             except Exception as e:
                 logger.error(f"CookieCloud更新 cookie 发生错误: {e}")
         else:
@@ -472,11 +475,11 @@ class Dydebug(_PluginBase):
                 else:
                     logger.info("更新本地 Cookie成功")
                     self._saved_cookie = current_cookies  # 保存
+                    self.refresh_cookie()
             except Exception as e:
                 logger.error(f"本地更新 cookie 发生错误: {e}")
-            logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
-    def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
+    def get_cookie(self):
         if self._saved_cookie and self._cookie_valid:
             return self._saved_cookie
         try:
@@ -519,8 +522,6 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        # if not self._use_cookiecloud:
-        #     return
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
@@ -536,12 +537,13 @@ class Dydebug(_PluginBase):
                         logger.info("本地保存的 cookie 有效")
                         self._cookie_valid = True
                         cookie_used = True
+                        return 
                     else:
                         logger.warning("本地保存的 cookie 无效")
                         self._saved_cookie = None  # 清空无效的 cookie
                 if not self._use_cookiecloud:
                     browser.close()
-                    logger.info("本地cookie失效，CookieCloud没有启用, 不尝试从cc获取新的 cookie")
+                    logger.error("本地cookie失效，CookieCloud没有启用, 不尝试从cc获取新的 cookie")
                     return
                 # 如果本地 cookie 无效，则尝试调用 get_cookie
                 if not cookie_used:
@@ -641,50 +643,48 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        if self._input_id_list:
-            if "||" in self._input_id_list:
-                parts = self._input_id_list.split("||", 1)
-                input_id_list = parts[0]
-            else:
-                input_id_list = self._input_id_list
-            id_list = input_id_list.split(",")
-            app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
-            for app_url in app_urls:
-                page.goto(app_url)  # 打开应用详情页
-                app_id = app_url.split("/")[-1]
-                time.sleep(2)
-                # 依次点击每个按钮
-                for xpath, name in buttons:
-                    # 等待按钮出现并可点击
-                    try:
-                        button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
-                        button.click()
-                        # logger.info(f"已点击 '{name}' 按钮")
-                        page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
-                        # logger.info(f"已找到文本框")
-                        input_area = page.locator('textarea.js_ipConfig_textarea')
-                        confirm = page.locator('.js_ipConfig_confirmBtn')
-                        input_area.fill(self._current_ip_address)  # 填充 IP 地址
-                        confirm.click()  # 点击确认按钮
-                        time.sleep(3)  # 等待处理
-                        self._ip_changed = True
-                    except Exception as e:
-                        logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
-                        self._ip_changed = False
-                        if "disabled" in str(e):
-                            logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
-                if self._ip_changed:
-                    logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
-                    ip_parts = self._current_ip_address.split('.')
-                    masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
-                    if self._my_send:
-                        result = self._my_send.send(title="更新可信IP成功",
-                                                    content='应用: ' + app_id + ' 输入IP：' + masked_ip,
-                                                    force_send=True, diy_channel="WeChat")
-            return
-        else:
+        if not self._input_id_list:
             logger.error("未找到应用id，修改IP失败")
             return
+        if "||" in self._input_id_list:
+            parts = self._input_id_list.split("||", 1)
+            input_id_list = parts[0]
+        else:
+            input_id_list = self._input_id_list
+        id_list = input_id_list.split(",")
+        app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
+        for app_url in app_urls:
+            page.goto(app_url)  # 打开应用详情页
+            app_id = app_url.split("/")[-1]
+            time.sleep(2)
+            # 依次点击每个按钮
+            for xpath, name in buttons:
+                # 等待按钮出现并可点击
+                try:
+                    button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
+                    button.click()
+                    # logger.info(f"已点击 '{name}' 按钮")
+                    page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
+                    # logger.info(f"已找到文本框")
+                    input_area = page.locator('textarea.js_ipConfig_textarea')
+                    confirm = page.locator('.js_ipConfig_confirmBtn')
+                    input_area.fill(self._current_ip_address)  # 填充 IP 地址
+                    confirm.click()  # 点击确认按钮
+                    time.sleep(3)  # 等待处理
+                    self._ip_changed = True
+                except Exception as e:
+                    logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
+                    self._ip_changed = False
+                    if "disabled" in str(e):
+                        logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
+            if self._ip_changed:
+                logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
+                ip_parts = self._current_ip_address.split('.')
+                masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
+                if self._my_send:
+                    result = self._my_send.send(title="更新可信IP成功",
+                                                content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                                                force_send=True, diy_channel="WeChat")
 
     def __update_config(self):
         """
@@ -941,7 +941,7 @@ class Dydebug(_PluginBase):
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "登录二维码都会在此展示，二维码有6秒延时---[适用于Docker版]’",
+                "text": "登录二维码都会在此展示，二维码有6秒延时. [适用于Docker版]",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -1074,6 +1074,7 @@ class Dydebug(_PluginBase):
                         if result:
                             logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
                             browser.close()
+                            logger.info("----------------------本次任务结束----------------------")
                             return
                         logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
@@ -1088,6 +1089,7 @@ class Dydebug(_PluginBase):
                 else:
                     logger.warning("远程推送任务: 未找到二维码")
                 browser.close()
+                logger.info("----------------------本次任务结束----------------------")
         except Exception as e:
             logger.error(f"远程推送任务: 推送二维码失败: {e}")
 
@@ -1119,8 +1121,6 @@ class Dydebug(_PluginBase):
         if self.text[:6].isdigit() and len(self.text) == 7:
             self._verification_code = self.text[:6]
             logger.info(f"收到验证码：{self._verification_code}")
-        # else:
-        #     logger.info(f"收到消息：{self.text}")
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -1155,4 +1155,19 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
