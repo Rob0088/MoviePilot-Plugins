@@ -9,6 +9,7 @@
     "level": 2,
     "v2": true,
     "history": {
+        "v1.4.0": "可以指定获取ip地址url,修复不使用cc时cookie失效过快，v1可同时配置多个通知方式，server酱可以将文本发送到server3,二维码给服务号",
         "v1.3.0": "上传cookie时检查一次CC,兼容v2",
         "v1.2.0": "远程命令/push_qr，立即推送一次二维码到pushplus。添加<本地扫码刷新cookie>",
         "v1.1.5": "将chromium运行设置为headless模式",
