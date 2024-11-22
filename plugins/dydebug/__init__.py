@@ -539,7 +539,10 @@ class Dydebug(_PluginBase):
                     else:
                         logger.warning("本地保存的 cookie 无效")
                         self._saved_cookie = None  # 清空无效的 cookie
-
+                if not self._use_cookiecloud:
+                    browser.close()
+                    logger.info("本地cookie失效，CookieCloud没有启用, 不尝试从cc获取新的 cookie")
+                    return
                 # 如果本地 cookie 无效，则尝试调用 get_cookie
                 if not cookie_used:
                     logger.info("尝试调用 get_cookie 获取新的 cookie")
