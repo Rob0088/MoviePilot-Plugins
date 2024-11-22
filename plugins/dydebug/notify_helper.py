@@ -93,8 +93,6 @@ class MySender:
         token = tmp_tokens
         if ',' in tmp_tokens:
             before_comma, after_comma = tmp_tokens.split(',', 1)
-
-            # 根据是否有图片选择 token
             if before_comma.startswith('sctp') and image:
                 token = after_comma  # 图片发到公众号
             else:
