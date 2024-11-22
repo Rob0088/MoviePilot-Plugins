@@ -271,7 +271,7 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
 
-        if self._cookie_valid and self._use_cookiecloud:
+        if self._cookie_valid:
             logger.info("开始检测公网IP")
             if self.CheckIP():
                 self.ChangeIP()
