@@ -537,17 +537,12 @@ class Dydebug(_PluginBase):
                         logger.info("本地保存的 cookie 有效")
                         self._cookie_valid = True
                         cookie_used = True
-                        return 
                     else:
                         logger.warning("本地保存的 cookie 无效")
                         self._saved_cookie = None  # 清空无效的 cookie
-                if not self._use_cookiecloud:
-                    browser.close()
-                    logger.error("本地cookie失效，CookieCloud没有启用, 不尝试从cc获取新的 cookie")
-                    return
-                # 如果本地 cookie 无效，则尝试调用 get_cookie
-                if not cookie_used:
-                    logger.info("尝试调用 get_cookie 获取新的 cookie")
+
+                if not cookie_used and self._use_cookiecloud:
+                    logger.info("尝试从cookiecloud 获取新的 cookie")
                     cookie = self.get_cookie()
                     if cookie:
                         context.add_cookies(cookie)
@@ -576,13 +571,12 @@ class Dydebug(_PluginBase):
                     PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
-
         except Exception as e:
             self._cookie_valid = False
             self._saved_cookie = None  # 异常时清空 cookie
             logger.error(f"cookie 校验过程中发生异常: {e}")
 
-    #
+    
     def check_login_status(self, page, task):
         # 等待页面加载
         time.sleep(3)
