@@ -61,6 +61,8 @@ class Dydebug(_PluginBase):
     _is_special_upload = False
     # 聚合通知
     _my_send = None
+    # 保存cookie
+    _saved_cookie = None
     # 通知方式token/api
     _notification_token = ''
 
@@ -269,14 +271,14 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
 
-        if self._cookie_valid:
+        if self._cookie_valid and self._use_cookiecloud:
             logger.info("开始检测公网IP")
             if self.CheckIP():
                 self.ChangeIP()
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
         else:
-            logger.warning("cookie已失效请及时更新，不检测公网IP")
+            logger.warning("cookie已失效或不使用CookieCloud。请及时更新，本次不检查公网IP")
 
     def CheckIP(self):
         if "||" in self._input_id_list:
@@ -298,10 +300,6 @@ class Dydebug(_PluginBase):
             logger.error("获取IP失败 不操作IP")
             return False
 
-        if self._forced_update:
-            logger.info("强制更新IP")
-            self._current_ip_address = ip_address
-            return True
         elif not self._ip_changed:  # 上次修改IP失败
             logger.info("上次IP修改IP没有成功 继续尝试修改IP")
             self._current_ip_address = ip_address
@@ -424,8 +422,8 @@ class Dydebug(_PluginBase):
                     else:
                         self._ip_changed = False
                 browser.close()
-
         except Exception as e:
+            self._ip_changed = False
             logger.error(f"更改可信IP失败: {e}")
         finally:
             pass
@@ -463,11 +461,24 @@ class Dydebug(_PluginBase):
                 else:
                     logger.error("连接 CookieCloud 失败", self._server)
             except Exception as e:
-                logger.error(f"更新 cookie 发生错误: {e}")
+                logger.error(f"CookieCloud更新 cookie 发生错误: {e}")
         else:
+            try:
+                current_url = page.url
+                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
+                if current_cookies is None:
+                    logger.error("更新本地 Cookie失败")
+                    return
+                else:
+                    logger.info("更新本地 Cookie成功")
+                    self._saved_cookie = current_cookies  # 保存
+            except Exception as e:
+                logger.error(f"本地更新 cookie 发生错误: {e}")
             logger.error("CookieCloud没有启用或配置错误, 不刷新cookie")
 
     def get_cookie(self):  # 只有从CookieCloud获取cookie成功才返回True
+        if self._saved_cookie and self._cookie_valid:
+            return self._saved_cookie
         try:
             cookie_header = ''
             if self._use_cookiecloud:
@@ -508,34 +519,63 @@ class Dydebug(_PluginBase):
         return cookies
 
     def refresh_cookie(self):  # 保活
-        if self._use_cookiecloud:
-            try:
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
-                    context = browser.new_context()
-                    cookie = self.get_cookie()
-                    if cookie:
-                        context.add_cookies(cookie)
+        # if not self._use_cookiecloud:
+        #     return
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                context = browser.new_context()
+                cookie_used = False
+                if self._saved_cookie:
+                    logger.info("尝试使用本地保存的 cookie")
+                    context.add_cookies(self._saved_cookie)
                     page = context.new_page()
                     page.goto(self._wechatUrl)
                     time.sleep(3)
-                    if not self.check_login_status(page, task='refresh_cookie'):
-                        self._cookie_valid = False
-                        if self._my_send:
-                            result = self._my_send.send(title="cookie已失效，请及时更新",
-                                                        content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
-                                                        image=None, force_send=False)  # 标题，内容，图片，是否强制发送
-                            if result:
-                                logger.info(f"cookie失效通知发送失败，原因：{result}")
-                    else:
+                    if self.check_login_status(page, task='refresh_cookie'):
+                        logger.info("本地保存的 cookie 有效")
                         self._cookie_valid = True
-                        if self._my_send:
-                            self._my_send.reset_limit()
-                        PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
-                        self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
-                    browser.close()
-            except Exception as e:
-                logger.error(f"cookie校验失败:{e}")
+                        cookie_used = True
+                    else:
+                        logger.warning("本地保存的 cookie 无效")
+                        self._saved_cookie = None  # 清空无效的 cookie
+
+                # 如果本地 cookie 无效，则尝试调用 get_cookie
+                if not cookie_used:
+                    logger.info("尝试调用 get_cookie 获取新的 cookie")
+                    cookie = self.get_cookie()
+                    if cookie:
+                        context.add_cookies(cookie)
+                        page = context.new_page()
+                        page.goto(self._wechatUrl)
+                        time.sleep(3)
+                        if self.check_login_status(page, task='refresh_cookie'):
+                            logger.info("新获取的 cookie 有效")
+                            self._cookie_valid = True
+                            self._saved_cookie = context.cookies()  # 保存有效的 cookie
+                        else:
+                            logger.warning("新获取的 cookie 无效")
+                            self._cookie_valid = False
+                            self._saved_cookie = None  # 清空无效的 cookie
+                            if self._my_send:
+                                result = self._my_send.send(
+                                    title="cookie已失效，请及时更新",
+                                    content="请在企业微信应用发送/push_qr，让插件推送二维码。如果是使用微信通知请确保公网IP还没有变动",
+                                    image=None, force_send=False
+                                )
+                                if result:
+                                    logger.info(f"cookie失效通知发送失败，原因：{result}")
+                if self._cookie_valid:
+                    if self._my_send:
+                        self._my_send.reset_limit()
+                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
+                    self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
+                browser.close()
+
+        except Exception as e:
+            self._cookie_valid = False
+            self._saved_cookie = None  # 异常时清空 cookie
+            logger.error(f"cookie 校验过程中发生异常: {e}")
 
     #
     def check_login_status(self, page, task):
@@ -642,7 +682,7 @@ class Dydebug(_PluginBase):
         else:
             logger.error("未找到应用id，修改IP失败")
             return
-            
+
     def __update_config(self):
         """
         更新配置
@@ -898,7 +938,7 @@ class Dydebug(_PluginBase):
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "登录二维码都会在此展示，二维码有6秒延时，过期时间仅对应‘本地扫码功能’",
+                "text": "登录二维码都会在此展示，二维码有6秒延时---[适用于Docker版]’",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -1112,3 +1152,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
