@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.0"
+    plugin_version = "1.4.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -379,8 +379,6 @@ class Dydebug(_PluginBase):
             logger.debug(str(e))
             return None, None
 
-
-
     def ChangeIP(self):
         logger.info("开始请求企业微信管理更改可信IP")
         try:
@@ -459,7 +457,7 @@ class Dydebug(_PluginBase):
                 flag = self._cc_server.update_cookie(formatted_cookies)
                 if flag:
                     logger.info("更新 CookieCloud 成功")
-                    self.refresh_cookie()
+                    self._cookie_valid = True
                 else:
                     logger.error("更新 CookieCloud 失败")
 
@@ -475,9 +473,9 @@ class Dydebug(_PluginBase):
                 else:
                     logger.info("更新本地 Cookie成功")
                     self._saved_cookie = current_cookies  # 保存
-                    self.refresh_cookie()
+                    self._cookie_valid = True
             except Exception as e:
-                logger.error(f"本地更新 cookie 发生错误: {e}")
+                logger.error(f"更新本地 cookie 发生错误: {e}")
 
     def get_cookie(self):
         if self._saved_cookie and self._cookie_valid:
@@ -528,21 +526,22 @@ class Dydebug(_PluginBase):
                 context = browser.new_context()
                 cookie_used = False
                 if self._saved_cookie:
-                    logger.info("尝试使用本地保存的 cookie")
+                    # logger.info("尝试使用本地保存的 cookie")
                     context.add_cookies(self._saved_cookie)
                     page = context.new_page()
                     page.goto(self._wechatUrl)
                     time.sleep(3)
                     if self.check_login_status(page, task='refresh_cookie'):
-                        logger.info("本地保存的 cookie 有效")
+                        # logger.info("本地保存的 cookie 有效")
                         self._cookie_valid = True
                         cookie_used = True
                     else:
-                        logger.warning("本地保存的 cookie 无效")
+                        # logger.warning("本地保存的 cookie 无效")
+                        self._cookie_valid = False
                         self._saved_cookie = None  # 清空无效的 cookie
 
                 if not cookie_used and self._use_cookiecloud:
-                    logger.info("尝试从cookiecloud 获取新的 cookie")
+                    logger.info("尝试从CookieCloud 获取新的 cookie")
                     cookie = self.get_cookie()
                     if cookie:
                         context.add_cookies(cookie)
@@ -550,11 +549,11 @@ class Dydebug(_PluginBase):
                         page.goto(self._wechatUrl)
                         time.sleep(3)
                         if self.check_login_status(page, task='refresh_cookie'):
-                            logger.info("新获取的 cookie 有效")
+                            # logger.info("新获取的 cookie 有效")
                             self._cookie_valid = True
                             self._saved_cookie = context.cookies()  # 保存有效的 cookie
                         else:
-                            logger.warning("新获取的 cookie 无效")
+                            # logger.warning("新获取的 cookie 无效")
                             self._cookie_valid = False
                             self._saved_cookie = None  # 清空无效的 cookie
                             if self._my_send:
@@ -576,7 +575,7 @@ class Dydebug(_PluginBase):
             self._saved_cookie = None  # 异常时清空 cookie
             logger.error(f"cookie 校验过程中发生异常: {e}")
 
-    
+    #
     def check_login_status(self, page, task):
         # 等待页面加载
         time.sleep(3)
@@ -637,9 +636,6 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        if not self._input_id_list:
-            logger.error("未找到应用id，修改IP失败")
-            return
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
@@ -1149,12 +1145,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
-
-
-
-
 
 
 
