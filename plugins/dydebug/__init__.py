@@ -18,8 +18,7 @@ from app.core.event import eventmanager, Event
 from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.plugins.dydebug.update_help import PyCookieCloud
-from app.plugins.dydebug.notify_helper import MySender
+from app.plugins.dydebug.helper import PyCookieCloud, MySender
 from app.schemas.types import EventType
 
 
