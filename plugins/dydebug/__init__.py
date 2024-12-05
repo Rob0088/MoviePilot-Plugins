@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.2"
+    plugin_version = "1.4.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -135,7 +135,7 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式，不通知
             self._my_send = None
-        self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -152,10 +152,11 @@ class Dydebug(_PluginBase):
                 self._onlyonce = False
 
             if self._forced_update:
-                logger.info("使用Cookie强制更新公网IP")
-                self._scheduler.add_job(func=self.forced_change, trigger='date',
-                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                        name="强制更新公网IP")  # 添加任务
+                if not self._local_scan:
+                    logger.info("使用Cookie，强制更新公网IP")
+                    self._scheduler.add_job(func=self.forced_change, trigger='date',
+                                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                            name="强制更新公网IP")  # 添加任务
                 self._forced_update = False
 
             if self._local_scan:
@@ -192,7 +193,6 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
-        self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         # 先尝试cookie登陆
         try:
             with sync_playwright() as p:
@@ -227,7 +227,6 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
-        self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
@@ -283,7 +282,9 @@ class Dydebug(_PluginBase):
             logger.warning("cookie已失效请及时更新，本次不检查公网IP")
 
     def CheckIP(self):
-        ip_address = self.get_ip_from_url(self._input_id_list)
+        url, ip_address = self.get_ip_from_url(self._input_id_list)
+        if url and ip_address:
+            logger.info(f"IP获取成功: {url}: {ip_address}")
 
         # 如果所有 URL 请求失败
         if ip_address == "获取IP失败" or not ip_address:
@@ -322,10 +323,8 @@ class Dydebug(_PluginBase):
         if not self._cc_server.check_connection():
             self._cc_server = None
             logger.error("没有可用的CookieCloud服务器")
-            # else:  # 未设置cookieCloud
 
-
-    def get_ip_from_url(self, input_data):
+    def get_ip_from_url(self, input_data) -> (str, str):
         # 根据输入解析 URL 列表
         if isinstance(input_data, str) and "||" in input_data:
             parts = input_data.split("||", 1)
@@ -342,13 +341,13 @@ class Dydebug(_PluginBase):
                 if response.status_code == 200:
                     ip_address = re.search(self._ip_pattern, response.text)
                     if ip_address:
-                        logger.info(f"IP获取成功: {url}: {ip_address.group()}")
-                        return ip_address.group()  # 返回匹配的 IP 地址
+                        # logger.info(f"IP获取成功: {url}: {ip_address.group()}")
+                        return url, ip_address.group()  # 返回匹配的 IP 地址
                 # logger.warning(f"{url} 响应无效或未匹配到 IP")
             except Exception as e:
                 if "104" not in str(e):  # 忽略特定错误码
                     logger.warning(f"{url} 获取IP失败, Error: {e}")
-        return "获取IP失败"
+        return None, "获取IP失败"
 
     def find_qrc(self, page):
         # 查找 iframe 元素并切换到它
@@ -640,6 +639,7 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
+        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
@@ -652,7 +652,7 @@ class Dydebug(_PluginBase):
             if app_id.startswith("100000"):
                 self._ip_changed = False
                 logger.warning(f"请按照https://github.com/RamenRa/MoviePilot-Plugins的说明进行配置应用ID")
-                return 
+                return
             page.goto(app_url)  # 打开应用详情页
             time.sleep(2)
             # 依次点击每个按钮
@@ -1153,34 +1153,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
