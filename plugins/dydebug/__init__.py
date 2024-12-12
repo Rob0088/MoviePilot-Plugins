@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.4"
+    plugin_version = "1.4.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -490,7 +490,24 @@ class Dydebug(_PluginBase):
             cookie_header = ''
             if not self._use_cookiecloud:
                 return
-            cookies, msg = self._cookiecloud.download()
+            # cookies, msg = self._cookiecloud.download()
+            result = self._cookiecloud.download()
+            logger.debug(f"从CookieCloud获取cookie返回值: {result}")  # 打印返回值到日志
+        
+            if result is None:
+                logger.error("从CookieCloud获取cookie失败,返回值为空")
+                return
+        
+            if not isinstance(result, tuple):
+                logger.error(f"从CookieCloud获取cookie失败,返回值类型异常: {type(result)}, 值: {result}")
+                return
+        
+            if len(result) != 2:
+                logger.error(f"从CookieCloud获取cookie失败,返回值长度异常: {len(result)}, 值: {result}")
+                return
+        
+            cookies, msg = result  # 解包
+            
             if not cookies:  # CookieCloud获取cookie失败
                 logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                 return
