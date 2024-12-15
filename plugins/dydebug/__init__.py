@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.6"
+    plugin_version = "1.4.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -445,6 +445,7 @@ class Dydebug(_PluginBase):
                     self._cookie_valid = False
                     return
                 self._saved_cookie = current_cookies
+                logger.info(f"从内置浏览器获取到 {current_cookies}")
                 formatted_cookies = {}
                 for cookie in current_cookies:
                     domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
@@ -454,6 +455,7 @@ class Dydebug(_PluginBase):
                     if domain not in formatted_cookies:
                         formatted_cookies[domain] = []
                     formatted_cookies[domain].append(cookie)
+                logger.info(f"上传的 cookie {formatted_cookies}")
                 if self._cc_server.update_cookie(formatted_cookies):
                     logger.info("更新 CookieCloud 成功")
                     self._cookie_valid = True
@@ -496,6 +498,7 @@ class Dydebug(_PluginBase):
                 return
             # 处理 .work.weixin.qq.com 域名的 Cookie
             for domain, cookie in cookies.items():
+                logger.info(f"获取的原始cookie {cookie}")
                 if domain == ".work.weixin.qq.com":
                     # 检查并删除包含 '_upload_type=A' 的条目
                     filtered_cookies = [
