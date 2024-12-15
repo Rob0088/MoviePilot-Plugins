@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.1"
+    plugin_version = "1.5.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -525,7 +525,7 @@ class Dydebug(_PluginBase):
             # 如果未找到 .work.weixin.qq.com 的 Cookie，使用默认 Header
             if cookie_header == '':
                 cookie_header = self._cookie_header
-    
+            logger.info(f"传入parse_cookie_header: {cookie_header}")
             # 将 Header 转换为标准 Cookie 结构并返回
             cookie = self.parse_cookie_header(cookie_header)
             return cookie
