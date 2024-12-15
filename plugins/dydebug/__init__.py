@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.9"
+    plugin_version = "1.5.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -485,41 +485,54 @@ class Dydebug(_PluginBase):
                 self._send_cookie_false()
                 logger.error(f"更新本地 cookie 发生错误: {e}")
 
-    def get_cookie(self):
-        # if self._saved_cookie and self._cookie_valid:
-        #     return self._saved_cookie
-        try:
-            cookie_header = ''
-            if not self._use_cookiecloud:
-                return
-            cookies, msg = self._cookiecloud.download()
-            if not cookies:  # CookieCloud获取cookie失败
-                logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
-                return
-            # 处理 .work.weixin.qq.com 域名的 Cookie
-            for domain, cookie in cookies.items():
-                logger.info(f"获取的原始cookie {cookie}")
-                if domain == ".work.weixin.qq.com":
-                    # 检查并删除包含 '_upload_type=A' 的条目
-                    filtered_cookies = [
-                        item for item in cookie
-                        if not (item.get('name') == '_upload_type' and item.get('value') == 'A')
-                    ]
-                    if len(filtered_cookies) != len(cookie):  # 如果删除了某些条目
-                        cookie_header = filtered_cookies
-                        self._is_special_upload = True
-                        logger.info("已删除 '_upload_type=A' 的 Cookie 条目")
-                    else:
-                        cookie_header = cookie
-                        self._is_special_upload = False
-                    break
-            if cookie_header == '':
-                cookie_header = self._cookie_header
-            cookie = self.parse_cookie_header(cookie_header)
-            return cookie
-        except Exception as e:
-            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
+def get_cookie(self):
+    """获取 Cookie，并删除包含特定标识的条目"""
+    try:
+        cookie_header = ''
+
+        # 检查是否使用 CookieCloud
+        if not self._use_cookiecloud:
             return
+
+        # 从 CookieCloud 下载 Cookie
+        cookies, msg = self._cookiecloud.download()
+        if not cookies:  # 下载失败
+            logger.error(f"CookieCloud 获取 Cookie 失败，失败原因：{msg}")
+            return
+
+        # 处理 .work.weixin.qq.com 域名的 Cookie
+        for domain, cookie in cookies.items():
+            logger.info(f"获取的原始 cookie: {cookie}")
+            if domain == ".work.weixin.qq.com":
+                # 如果 cookie 是字符串形式，则需要解析为字典
+                if isinstance(cookie, str):
+                    cookie = self.parse_cookie_header(cookie)  # 解析字符串为字典
+
+                # 检查并删除包含 '_upload_type=A' 的条目
+                filtered_cookies = [
+                    item for item in cookie
+                    if not (item.get('name') == '_upload_type' and item.get('value') == 'A')
+                ]
+                if len(filtered_cookies) != len(cookie):  # 如果删除了某些条目
+                    cookie_header = filtered_cookies
+                    self._is_special_upload = True
+                    logger.info("已删除 '_upload_type=A' 的 Cookie 条目")
+                else:
+                    cookie_header = cookie
+                    self._is_special_upload = False
+                break
+
+        # 如果未找到 .work.weixin.qq.com 的 Cookie，使用默认 Header
+        if cookie_header == '':
+            cookie_header = self._cookie_header
+
+        # 将 Header 转换为标准 Cookie 结构并返回
+        cookie = self.parse_cookie_header(cookie_header)
+        return cookie
+
+    except Exception as e:
+        logger.error(f"从 CookieCloud 获取 Cookie 时发生错误，错误原因: {e}")
+        return
 
     @staticmethod
     def parse_cookie_header(cookie_header):
