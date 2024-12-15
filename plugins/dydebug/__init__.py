@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.5"
+    plugin_version = "1.4.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -44,7 +44,7 @@ class Dydebug(_PluginBase):
     # 检测间隔时间,默认10分钟
     _refresh_cron = '*/10 * * * *'
 
-# ------------------------------------------私有属性------------------------------------------
+    # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
     _onlyonce = False
@@ -133,7 +133,7 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token, func=self.post_message)
         else:
             self._my_send = MySender(self._notification_token)
-        if not self._my_send.init_success:    # 没有输入通知方式，不通知
+        if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
         _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         # 停止现有任务
@@ -153,7 +153,7 @@ class Dydebug(_PluginBase):
 
             if self._forced_update:
                 if not self._local_scan:
-                    logger.info("使用Cookie，强制更新公网IP")
+                    logger.info("使用Cookie,强制更新公网IP")
                     self._scheduler.add_job(func=self.forced_change, trigger='date',
                                             run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                             name="强制更新公网IP")  # 添加任务
@@ -185,12 +185,12 @@ class Dydebug(_PluginBase):
         self._cookie_valid = False
         if self._my_send:
             result = self._my_send.send(
-                title="cookie已失效，请及时更新",
-                content="请在企业微信应用发送/push_qr， 如有验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
+                title="cookie已失效,请及时更新",
+                content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
                 image=None, force_send=False
             )
             if result:
-                logger.info(f"cookie失效通知发送失败，原因：{result}")
+                logger.info(f"cookie失效通知发送失败,原因：{result}")
 
     @eventmanager.register(EventType.PluginAction)
     def forced_change(self, event: Event = None):
@@ -249,7 +249,7 @@ class Dydebug(_PluginBase):
                     current_time = datetime.now()
                     future_time = current_time + timedelta(seconds=110)
                     self._future_timestamp = int(future_time.timestamp())
-                    logger.info("请重新进入插件面板扫码! 每20秒检查登录状态，最大尝试5次")
+                    logger.info("请重新进入插件面板扫码! 每20秒检查登录状态,最大尝试5次")
                     max_attempts = 5
                     attempt = 0
                     while attempt < max_attempts:
@@ -263,7 +263,7 @@ class Dydebug(_PluginBase):
                     else:
                         logger.info("用户可能没有扫码或登录失败")
                 else:
-                    logger.error("未找到二维码，任务结束")
+                    logger.error("未找到二维码,任务结束")
                 logger.info("----------------------本次任务结束----------------------")
                 browser.close()
         except Exception as e:
@@ -290,7 +290,7 @@ class Dydebug(_PluginBase):
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
         else:
-            logger.warning("cookie已失效请及时更新，本次不检查公网IP")
+            logger.warning("cookie已失效请及时更新,本次不检查公网IP")
 
     def CheckIP(self):
         url, ip_address = self.get_ip_from_url(self._input_id_list)
@@ -298,7 +298,7 @@ class Dydebug(_PluginBase):
             logger.info(f"IP获取成功: {url}: {ip_address}")
 
         # 如果所有 URL 请求失败
-        if ip_address == "获取IP失败" or not ip_address:
+        if ip_address == "获取IP失败" or not url:
             logger.error("获取IP失败 不操作可信IP")
             return False
 
@@ -356,7 +356,7 @@ class Dydebug(_PluginBase):
                     if ip_address:
                         return url, ip_address.group()  # 返回匹配的 IP 地址
             except Exception as e:
-                if "104" not in str(e) or 'Read timed out' not in str(e):  # 忽略网络波动，都失败会返回None, "获取IP失败"
+                if "104" not in str(e) and 'Read timed out' not in str(e):  # 忽略网络波动,都失败会返回None, "获取IP失败"
                     logger.warning(f"{url} 获取IP失败, Error: {e}")
         return None, "获取IP失败"
 
@@ -402,7 +402,7 @@ class Dydebug(_PluginBase):
                 time.sleep(3)
                 img_src, refuse_time = self.find_qrc(page)
                 if img_src:
-                    if self._my_send:
+                    if self._my_send:   # 统一逻辑,只有用户发送'/push_qr'才会发生二维码
                         self._ip_changed = False
                         self._send_cookie_false()
                         logger.info("已尝试发送cookie失效通知")
@@ -415,7 +415,7 @@ class Dydebug(_PluginBase):
                     if self.check_login_status(page, ""):
                         self.click_app_management_buttons(page)
                     else:
-                        logger.info("cookie已失效,发送提醒通知")
+                        logger.info("发生了意料之外的错误,请附上配置信息到github反馈")
                         self._send_cookie_false()
                         self._ip_changed = False
                 browser.close()
@@ -433,7 +433,7 @@ class Dydebug(_PluginBase):
                 self.try_connect_cc()  # 再尝试一次连接
                 if self._cc_server is None:
                     return
-            logger.info("使用二维码登录成功，开始刷新cookie")
+            logger.info("使用二维码登录成功,开始刷新cookie")
             try:
                 if not self._cc_server.check_connection():
                     logger.error("连接 CookieCloud 失败", self._server)
@@ -490,33 +490,24 @@ class Dydebug(_PluginBase):
             cookie_header = ''
             if not self._use_cookiecloud:
                 return
-            # cookies, msg = self._cookiecloud.download()
-            result = self._cookiecloud.download()
-            logger.debug(f"从CookieCloud获取cookie返回值: {result}")  # 打印返回值到日志
-        
-            if result is None:
-                logger.error("从CookieCloud获取cookie失败,返回值为空")
-                return
-        
-            if not isinstance(result, tuple):
-                logger.error(f"从CookieCloud获取cookie失败,返回值类型异常: {type(result)}, 值: {result}")
-                return
-        
-            if len(result) != 2:
-                logger.error(f"从CookieCloud获取cookie失败,返回值长度异常: {len(result)}, 值: {result}")
-                return
-        
-            cookies, msg = result  # 解包
-            
+            cookies, msg = self._cookiecloud.download()
             if not cookies:  # CookieCloud获取cookie失败
                 logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                 return
+            # 处理 .work.weixin.qq.com 域名的 Cookie
             for domain, cookie in cookies.items():
                 if domain == ".work.weixin.qq.com":
-                    cookie_header = cookie
-                    if '_upload_type=A' in cookie:
+                    # 检查并删除包含 '_upload_type=A' 的条目
+                    filtered_cookies = [
+                        item for item in cookie
+                        if not (item.get('name') == '_upload_type' and item.get('value') == 'A')
+                    ]
+                    if len(filtered_cookies) != len(cookie):  # 如果删除了某些条目
+                        cookie_header = filtered_cookies
                         self._is_special_upload = True
+                        logger.info("已删除 '_upload_type=A' 的 Cookie 条目")
                     else:
+                        cookie_header = cookie
                         self._is_special_upload = False
                     break
             if cookie_header == '':
@@ -524,7 +515,7 @@ class Dydebug(_PluginBase):
             cookie = self.parse_cookie_header(cookie_header)
             return cookie
         except Exception as e:
-            logger.error(f"从CookieCloud获取cookie错误，错误原因:{e}")
+            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
             return
 
     @staticmethod
@@ -616,7 +607,7 @@ class Dydebug(_PluginBase):
                 if task == 'local_scanning':
                     time.sleep(6)
                 else:
-                    logger.info("等待30秒，请将短信验证码请以'？'结束，发送到<企业微信应用> 如： 110301？")
+                    logger.info("等待30秒,请将短信验证码请以'？'结束,发送到<企业微信应用> 如： 110301？")
                     time.sleep(30)  # 多等30秒
                 if self._verification_code:
                     # logger.info("输入验证码：" + self._verification_code)
@@ -625,6 +616,7 @@ class Dydebug(_PluginBase):
                         time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
                     confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
                     confirm_button.click()  # 点击确认
+                    self._verification_code = None
                     time.sleep(3)  # 等待处理
                     # 等待登录成功的元素出现
                     success_element = page.wait_for_selector('#check_corp_info', timeout=5000)
@@ -635,10 +627,10 @@ class Dydebug(_PluginBase):
                     logger.error("未收到短信验证码")
                     return False
         except Exception as e:
-            # logger.debug(str(e))  # 基于bug运行，请不要将错误输出到日志
-            # try:  # 没有登录成功，也没有短信验证码
+            # logger.debug(str(e))  # 基于bug运行,请不要将错误输出到日志
+            # try:  # 没有登录成功,也没有短信验证码
             if self.find_qrc(
-                    page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送，所以不算用户没有扫码
+                    page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送,所以不算用户没有扫码
                 logger.warning(f"用户没有扫描二维码")
                 return False
 
@@ -665,7 +657,7 @@ class Dydebug(_PluginBase):
             app_id = app_url.split("/")[-1]
             if app_id.startswith("100000") and len(app_id) == 6:
                 self._ip_changed = False
-                logger.warning(f"请按照https://github.com/RamenRa/MoviePilot-Plugins的说明进行配置应用ID")
+                logger.warning(f"请根据 https://github.com/RamenRa/MoviePilot-Plugins 的说明进行配置应用ID")
                 return
             page.goto(app_url)  # 打开应用详情页
             time.sleep(2)
@@ -721,7 +713,7 @@ class Dydebug(_PluginBase):
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
-        拼装插件配置页面，只保留必要的配置项，并添加 token 配置。
+        拼装插件配置页面,只保留必要的配置项,并添加 token 配置。
         """
         return [
             {
@@ -872,7 +864,7 @@ class Dydebug(_PluginBase):
                                             'model': 'input_id_list',
                                             'label': '[必填]应用ID',
                                             'rows': 1,
-                                            'placeholder': '输入应用ID，多个ID用英文逗号分隔。在企业微信应用页面URL末尾获取'
+                                            'placeholder': '输入应用ID,多个ID用英文逗号分隔。在企业微信应用页面URL末尾获取'
                                         }
                                     }
                                 ]
@@ -893,7 +885,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱等第三方通知，具体请查看作者主页'
+                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱等第三方通知,具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -913,7 +905,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'Cookie失效时通知用户，用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
+                                            'text': 'Cookie失效时通知用户,用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
                                         }
                                     }
                                 ]
@@ -944,16 +936,16 @@ class Dydebug(_PluginBase):
             color = "#ff0000" if self._enabled else "#bbbbbb"
             self._qr_code_image = None
         else:
-            # 二维码有效，格式化过期时间为 年-月-日 时:分:秒
+            # 二维码有效,格式化过期时间为 年-月-日 时:分:秒
             expiration_time = datetime.fromtimestamp(self._future_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-            vaild_text = f"二维码有效，过期时间: {expiration_time}"
+            vaild_text = f"二维码有效,过期时间: {expiration_time}"
             color = "#32CD32"
 
-        # 如果self._qr_code_image为None，返回提示信息
+        # 如果self._qr_code_image为None,返回提示信息
         if self._qr_code_image is None:
             img_component = {
                 "component": "div",
-                "text": "登录二维码都会在此展示，二维码有6秒延时。 [适用于Docker版]",
+                "text": "登录二维码都会在此展示,二维码有6秒延时。 [适用于Docker版]",
                 "props": {
                     "style": {
                         "fontSize": "22px",
@@ -1084,16 +1076,16 @@ class Dydebug(_PluginBase):
                     if self._my_send:
                         result = self._my_send.send("企业微信登录二维码", image=image_src)
                         if result:
-                            logger.info(f"远程推送任务: 二维码发送失败，原因：{result}")
+                            logger.info(f"远程推送任务: 二维码发送失败,原因：{result}")
                             browser.close()
                             logger.info("----------------------本次任务结束----------------------")
                             return
-                        logger.info("远程推送任务: 二维码已经发送，等待用户 90 秒内扫码登录")
-                        # logger.info("远程推送任务: 如收到短信验证码请以？结束，发送到<企业微信应用> 如： 110301？")
+                        logger.info("远程推送任务: 二维码发送成功,等待用户 90 秒内扫码登录。V2'微信通知'的用户,此消息并不准确")
+                        # logger.info("远程推送任务: 如收到短信验证码请以？结束,发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
                         if self.check_login_status(page, 'push_qr_code'):
                             self._update_cookie(page, context)  # 刷新cookie
-                            # logger.info("远程推送任务: 没有可用的CookieCloud服务器，只修改可信IP")
+                            # logger.info("远程推送任务: 没有可用的CookieCloud服务器,只修改可信IP")
                             self.click_app_management_buttons(page)
                     else:
                         logger.warning("远程推送任务: 没有找到可用的通知方式")
@@ -1145,7 +1137,7 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            # logger.info(f"{self.plugin_name}定时服务启动，时间间隔 {self._cron} ")
+            # logger.info(f"{self.plugin_name}定时服务启动,时间间隔 {self._cron} ")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
@@ -1166,7 +1158,6 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
 
 
 
