@@ -486,8 +486,8 @@ class Dydebug(_PluginBase):
                 logger.error(f"更新本地 cookie 发生错误: {e}")
 
     def get_cookie(self):
-        if self._saved_cookie and self._cookie_valid:
-            return self._saved_cookie
+        # if self._saved_cookie and self._cookie_valid:
+        #     return self._saved_cookie
         try:
             cookie_header = ''
             if not self._use_cookiecloud:
