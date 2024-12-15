@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.4.8"
+    plugin_version = "1.4.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -540,20 +540,20 @@ class Dydebug(_PluginBase):
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
                 context = browser.new_context()
                 cookie_used = False
-                if self._saved_cookie:
-                    # logger.info("尝试使用本地保存的 cookie")
-                    context.add_cookies(self._saved_cookie)
-                    page = context.new_page()
-                    page.goto(self._wechatUrl)
-                    time.sleep(3)
-                    if self.check_login_status(page, task='refresh_cookie'):
-                        # logger.info("本地保存的 cookie 有效")
-                        self._cookie_valid = True
-                        cookie_used = True
-                    else:
-                        # logger.warning("本地保存的 cookie 无效")
-                        self._cookie_valid = False
-                        self._saved_cookie = None  # 清空无效的 cookie
+                # if self._saved_cookie:
+                #     # logger.info("尝试使用本地保存的 cookie")
+                #     context.add_cookies(self._saved_cookie)
+                #     page = context.new_page()
+                #     page.goto(self._wechatUrl)
+                #     time.sleep(3)
+                #     if self.check_login_status(page, task='refresh_cookie'):
+                #         # logger.info("本地保存的 cookie 有效")
+                #         self._cookie_valid = True
+                #         cookie_used = True
+                #     else:
+                #         # logger.warning("本地保存的 cookie 无效")
+                #         self._cookie_valid = False
+                #         self._saved_cookie = None  # 清空无效的 cookie
 
                 if not cookie_used and self._use_cookiecloud:
                     # logger.info("尝试从CookieCloud 获取新的 cookie")
