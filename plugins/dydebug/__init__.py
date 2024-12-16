@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.0"
+    plugin_version = "1.6.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -419,6 +419,7 @@ class Dydebug(_PluginBase):
                     try:
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
+                            self._current_ip_address = china_ips
                             browser.close()
                             return url, china_ips
                     except Exception as e:
@@ -703,8 +704,8 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        # if not self.wan2:
-        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+        if not self.wan2:
+            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
