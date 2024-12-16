@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.8"
+    plugin_version = "1.5.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -410,14 +410,20 @@ class Dydebug(_PluginBase):
                         logger.warning(f"{url} 获取IP失败, Error: {e}")
             return None, "获取IP失败"
         else:
-            for url in urls:
-                try:
-                    china_ips = self.wan2.get_ipv4(url)
-                    if china_ips:
-                        self._current_ip_address = china_ips
-                        return url, china_ips
-                except Exception as e:
-                    logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
+            # 创建一个 Playwright 实例
+            with sync_playwright() as p:
+                # 启动浏览器
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                for url in urls:
+                    try:
+                        china_ips = self.wan2.get_ipv4(page, url)
+                        if china_ips:
+                            browser.close()
+                            return url, china_ips
+                    except Exception as e:
+                        logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
+            browser.close()
             return None, "获取IP失败"
 
     def find_qrc(self, page):
@@ -1215,6 +1221,3 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
-
-
-
