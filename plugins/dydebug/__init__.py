@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.2"
+    plugin_version = "1.6.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -740,7 +740,7 @@ class Dydebug(_PluginBase):
                         input_ip = self._current_ip_address
                     input_area.fill(input_ip)  # 填充 IP 地址
                     confirm.click()  # 点击确认按钮
-                    time.sleep(3)  # 等待处理
+                    time.sleep(15)  # 等待处理
                     self._ip_changed = True
                 except Exception as e:
                     logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
