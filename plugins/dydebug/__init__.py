@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.5"
+    plugin_version = "1.5.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -560,7 +560,7 @@ class Dydebug(_PluginBase):
 
             # 处理 .work.weixin.qq.com 域名的 Cookie
             for domain, cookie in cookies.items():
-                logger.info(f"获取的原始 cookie: {cookie}")
+                # logger.info(f"获取的原始 cookie: {cookie}")
                 if domain == ".work.weixin.qq.com":
                     # 如果 cookie 是字符串形式，则需要解析为字典
                     if isinstance(cookie, str):
