@@ -1,15 +1,17 @@
 import re
 import requests
+from playwright.sync_api import sync_playwright
+from app.modules.wechat import WeChat
+from app.schemas.types import NotificationType,MessageChannel
+
 import os
 import json
+import requests
 import base64
 import hashlib
 from typing import Dict, Any
-
 from Crypto import Random
 from Crypto.Cipher import AES
-from app.modules.wechat import WeChat
-from app.schemas.types import NotificationType,MessageChannel
 
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
@@ -123,7 +125,6 @@ class PyCookieCloud:
         new_lifetime = current_lifetime + seconds
         # 保存新的 _cookie_lifetime
         PyCookieCloud.save_cookie_lifetime(settings_file, new_lifetime)
-
 
 
 class MySender:
@@ -277,7 +278,7 @@ class MySender:
     def _send_v2_wechat(self, title, content, image, token):
         """V2 微信通知发送"""
         if token and ',' in token:
-            channel, actual_userid = token.split(',', 1)
+            _, actual_userid = token.split(',', 1)
         else:
             actual_userid = None
         self.post_message_func(
@@ -294,3 +295,155 @@ class MySender:
     def reset_limit(self):
         """解除限制，允许再次发送纯文本消息"""
         self.first_text_sent = False
+
+
+class IpLocationParser:
+    def __init__(self):
+        # self.url = url
+        pass
+
+    @staticmethod
+    def _parse(page, url):
+        """根据 URL 确定使用的函数"""
+        if url == "https://ip.orz.tools":
+            parser_method = IpLocationParser._parse_ip_orz_tools
+        elif url == "https://ip.skk.moe/multi":
+            parser_method = IpLocationParser._parse_ip_skk_moe
+        elif url == "http://revproxy.ustc.edu.cn:8000/":
+            parser_method = IpLocationParser._parse_ip_ustc
+        else:
+            # 未知 URL
+            return [], []
+        # 调用对应的解析方法
+        ipv4_addresses, locations = parser_method(page)
+        return ipv4_addresses, locations
+
+    @staticmethod
+    def _remove_duplicates(ipv4_addresses, locations):
+        """去重并保持 IP 地址和归属地的对应关系"""
+        seen = set()
+        unique_ipv4 = []
+        unique_locations = []
+
+        for ip, location in zip(ipv4_addresses, locations):
+            if ip not in seen:
+                seen.add(ip)
+                unique_ipv4.append(ip)
+                unique_locations.append(location)
+
+        return unique_ipv4, unique_locations
+
+    @staticmethod
+    def _is_valid_ipv4(ip):
+        """验证是否是合法的 IPv4 地址"""
+        return re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip) is not None
+
+    @staticmethod
+    def _parse_ip_orz_tools(page):
+        rows = page.query_selector_all('#results3 .row')
+        # print(f"ip_orz_tools共找到 {len(rows)} 行数据")
+        ipv4_addresses, locations = [], []
+
+        for i, row in enumerate(rows):
+            row_html = row.inner_html()
+
+            # 提取 IP 地址
+            ip_match = re.search(r'data-name="([^"]+)"', row_html)
+            if ip_match:
+                ip = ip_match.group(1).strip()
+                if not IpLocationParser._is_valid_ipv4(ip):
+                    continue
+            else:
+                continue
+
+            # 提取位置数据
+            loc_element = row.query_selector('.loc.cell')
+            location = loc_element.inner_text().strip() if loc_element else "未知"
+
+            ipv4_addresses.append(ip)
+            locations.append(location)
+
+        return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
+
+    @staticmethod
+    def _parse_ip_skk_moe(page):
+        rows = page.query_selector_all(
+            'body > div > section > div.x1n2onr6.xw2csxc.x10fe3q7.x116uinm.xdpxx8g > table > tbody > tr'
+        )
+        # print(f"skk共找到 {len(rows)} 行数据")
+        ipv4_addresses, locations = [], []
+
+        for i, row in enumerate(rows):
+            ip_element = row.query_selector('th')
+            loc_element = row.query_selector('td:nth-child(3)')  # 假设归属地在第 3 列
+
+            if ip_element and loc_element:
+                ip = ip_element.inner_text().strip()
+                if not IpLocationParser._is_valid_ipv4(ip):
+                    continue
+                location = loc_element.inner_text().strip()
+
+                ipv4_addresses.append(ip)
+                locations.append(location)
+
+        return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
+
+    @staticmethod
+    def _parse_ip_ustc(page):
+        rows = page.query_selector_all(
+            'body > div:nth-child(4) > center > table > tbody > tr > td:nth-child(2)'
+        )
+        # print(f"ip_ustc共找到 {len(rows)} 行数据")
+        ipv4_addresses, locations = [], []
+
+        for row in rows:
+            row_text = row.inner_text().strip()
+
+            # 提取 IP 地址
+            ip_match = re.match(r'(\d+\.\d+\.\d+\.\d+)', row_text)
+            if ip_match:
+                ip = ip_match.group(1).strip()
+                if not IpLocationParser._is_valid_ipv4(ip):
+                    continue
+            else:
+                continue
+
+            # 提取归属地
+            location_match = re.search(r'(China|中国).*', row_text)
+            location = location_match.group(0).strip() if location_match else "未知"
+
+            ipv4_addresses.append(ip)
+            locations.append(location)
+
+        return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
+
+    @staticmethod
+    def get_ipv4(url):
+        """返回多个中国 IP 地址，逗号分隔"""
+        # 创建一个解析器实例
+        with sync_playwright() as p:
+            # 启动浏览器
+            browser = p.chromium.launch(headless=False)
+            page = browser.new_page()
+
+            # 导航到目标页面
+            page.goto(url)
+
+            # 等待一段时间，让所有动态渲染的内容加载完成
+            page.wait_for_timeout(5000)  # 等待 5 秒钟，确保动态渲染完成
+
+            # 调用解析器解析数据
+            ipv4_addresses, locations = IpLocationParser._parse(page, url)
+
+            # 关闭浏览器
+            browser.close()
+
+            # 筛选出属于中国的 IP 地址
+            china_ips = [
+                ip for ip, location in zip(ipv4_addresses, locations)
+                if 'China' in location or '中国' in location
+            ]
+
+            # 返回逗号分隔的字符串
+            return ', '.join(china_ips)
+
