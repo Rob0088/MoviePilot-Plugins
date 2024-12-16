@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.3"
+    plugin_version = "1.6.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -729,18 +729,20 @@ class Dydebug(_PluginBase):
                     button.click()
                     # logger.info(f"已点击 '{name}' 按钮")
                     page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
+                    current_text = input_area.inner_text()  # 或者使用 .value 获取当前输入的值
+                    logger.info(f"当前文本框内容：'{current_text}'")
                     # logger.info(f"已找到文本框")
                     input_area = page.locator('textarea.js_ipConfig_textarea')
                     confirm = page.locator('.js_ipConfig_confirmBtn')
                     if self.wan2:
                         input_ip = self._current_ip_address.replace(",", ";")
                         logger.info(f"input_ip类型：{type(input_ip)}")
-                        logger.info(f"input_ip：{input_ip}")
                     else:
                         input_ip = self._current_ip_address
+                    logger.info(f"即将输入的内容：'{input_ip}'")
                     input_area.fill(input_ip)  # 填充 IP 地址
                     confirm.click()  # 点击确认按钮
-                    time.sleep(15)  # 等待处理
+                    time.sleep(5)  # 等待处理
                     self._ip_changed = True
                 except Exception as e:
                     logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
