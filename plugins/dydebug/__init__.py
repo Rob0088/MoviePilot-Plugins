@@ -18,7 +18,7 @@ from app.core.event import eventmanager, Event
 from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.plugins.dydebug.helper import PyCookieCloud, MySender
+from app.plugins.dydebug.helper import PyCookieCloud, MySender, IpLocationParser
 from app.schemas.types import EventType
 
 
@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.4"
+    plugin_version = "1.5.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -60,6 +60,8 @@ class Dydebug(_PluginBase):
     _is_special_upload = False
     # 聚合通知
     _my_send = None
+    # 多wan口支持
+    wan2 = None
     # 保存cookie
     _saved_cookie = None
     # 通知方式token/api
@@ -294,25 +296,70 @@ class Dydebug(_PluginBase):
 
     def CheckIP(self):
         url, ip_address = self.get_ip_from_url(self._input_id_list)
-        if url and ip_address:
-            logger.info(f"IP获取成功: {url}: {ip_address}")
+        if not self.wan2:
+            if url and ip_address:
+                logger.info(f"IP获取成功: {url}: {ip_address}")
 
-        # 如果所有 URL 请求失败
-        if ip_address == "获取IP失败" or not url:
-            logger.error("获取IP失败 不操作可信IP")
-            return False
+            # 如果所有 URL 请求失败
+            if ip_address == "获取IP失败" or not url:
+                logger.error("获取IP失败 不操作可信IP")
+                return False
 
-        elif not self._ip_changed:  # 上次修改IP失败
-            logger.info("上次IP修改IP失败 继续尝试修改IP")
-            self._current_ip_address = ip_address
-            return True
+            elif not self._ip_changed:  # 上次修改IP失败
+                logger.info("上次IP修改IP失败 继续尝试修改IP")
+                self._current_ip_address = ip_address
+                return True
 
-        # 检查 IP 是否变化
-        if ip_address != self._current_ip_address:
-            logger.info("检测到IP变化")
-            self._current_ip_address = ip_address
-            return True
+            # 检查 IP 是否变化
+            if ip_address != self._current_ip_address:
+                logger.info("检测到IP变化")
+                self._current_ip_address = ip_address
+                return True
+            else:
+                return False
         else:
+            if url and ip_address:
+                logger.info(f"IP获取成功: {url}: {ip_address}")
+
+            # 如果所有 URL 请求失败
+            if ip_address == "获取IP失败" or not url:
+                logger.error("获取IP失败 不操作可信IP")
+                return False
+
+            elif not self._ip_changed:  # 上次修改IP失败
+                logger.info("上次IP修改IP失败 继续尝试修改IP")
+                self._current_ip_address = ip_address
+                return True
+
+            # 处理只有单个 IP 地址的情况
+            if isinstance(ip_address, str):  # 刚获取到的IP
+                get_ips = [ip_address]
+            else:
+                get_ips = ip_address
+            if isinstance(self._current_ip_address, str):  # 之前保存的IP
+                save_ips = [self._current_ip_address]
+            else:
+                save_ips = self._current_ip_address
+            # 去重并排序，确保比较时顺序不影响结果
+            save_ips_sorted = sorted(set(save_ips))
+            get_ips_sorted = sorted(set(get_ips))
+
+            # 如果当前 IP 地址的数量少于之前的数量
+            if len(get_ips_sorted) < len(save_ips_sorted):
+                # 检查剩余的 IP 是否都在之前的 IP 列表中
+                for ip in get_ips_sorted:
+                    if ip not in save_ips_sorted:
+                        return True  # 如果有 IP 不在之前的列表中，说明变化
+                return False  # 如果剩余的 IP 都包含在之前的 IP 中，认为没有变化
+
+            # 如果两个列表的 IP 地址数量不一致，视为发生变化
+            if len(save_ips_sorted) != len(get_ips_sorted):
+                return True
+
+            # 如果两个列表中的 IP 地址不同，视为发生变化
+            if save_ips_sorted != get_ips_sorted:
+                return True
+            # 否则认为 IP 没有变化
             return False
 
     def try_connect_cc(self):
@@ -337,7 +384,10 @@ class Dydebug(_PluginBase):
 
     def get_ip_from_url(self, input_data) -> (str, str):
         # 根据输入解析 URL 列表
-        if isinstance(input_data, str) and "||" in input_data:
+        if isinstance(input_data, str) and "wan2" in input_data:
+            self.wan2 = IpLocationParser()
+            urls = ["http://revproxy.ustc.edu.cn:8000/", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
+        elif isinstance(input_data, str) and "||" in input_data:
             _, url_list = input_data.split("||", 1)
             urls = url_list.split(",")
         elif isinstance(input_data, list):
@@ -347,18 +397,27 @@ class Dydebug(_PluginBase):
 
         # 随机化 URL 列表
         random.shuffle(urls)
-
-        for url in urls:
-            try:
-                response = requests.get(url, timeout=3)
-                if response.status_code == 200:
-                    ip_address = re.search(self._ip_pattern, response.text)
-                    if ip_address:
-                        return url, ip_address.group()  # 返回匹配的 IP 地址
-            except Exception as e:
-                if "104" not in str(e) and 'Read timed out' not in str(e):  # 忽略网络波动,都失败会返回None, "获取IP失败"
-                    logger.warning(f"{url} 获取IP失败, Error: {e}")
-        return None, "获取IP失败"
+        if not self.wan2:
+            for url in urls:
+                try:
+                    response = requests.get(url, timeout=3)
+                    if response.status_code == 200:
+                        ip_address = re.search(self._ip_pattern, response.text)
+                        if ip_address:
+                            return url, ip_address.group()  # 返回匹配的 IP 地址
+                except Exception as e:
+                    if "104" not in str(e) and 'Read timed out' not in str(e):  # 忽略网络波动,都失败会返回None, "获取IP失败"
+                        logger.warning(f"{url} 获取IP失败, Error: {e}")
+            return None, "获取IP失败"
+        else:
+            for url in urls:
+                try:
+                    china_ips = self.wan2.get_ipv4(url)
+                    if china_ips:
+                        return url, china_ips
+                except Exception as e:
+                    logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
+            return None, "获取IP失败"
 
     def find_qrc(self, page):
         # 查找 iframe 元素并切换到它
@@ -682,7 +741,11 @@ class Dydebug(_PluginBase):
                     # logger.info(f"已找到文本框")
                     input_area = page.locator('textarea.js_ipConfig_textarea')
                     confirm = page.locator('.js_ipConfig_confirmBtn')
-                    input_area.fill(self._current_ip_address)  # 填充 IP 地址
+                    if self.wan2:
+                        input_ip = self._current_ip_address.replace(",", ";")
+                    else:
+                        input_ip = self._current_ip_address
+                    input_area.fill(input_ip)  # 填充 IP 地址
                     confirm.click()  # 点击确认按钮
                     time.sleep(3)  # 等待处理
                     self._ip_changed = True
@@ -987,7 +1050,7 @@ class Dydebug(_PluginBase):
                     }
                 }
             }
-        if self._is_special_upload:
+        if self._is_special_upload and self._enabled:
             # 计算 cookie_lifetime 的天数、小时数和分钟数
             cookie_lifetime_days = self._cookie_lifetime // 86400  # 一天的秒数为 86400
             cookie_lifetime_hours = (self._cookie_lifetime % 86400) // 3600  # 计算小时数
