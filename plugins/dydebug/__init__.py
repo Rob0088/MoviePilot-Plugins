@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.1"
+    plugin_version = "1.6.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -734,6 +734,8 @@ class Dydebug(_PluginBase):
                     confirm = page.locator('.js_ipConfig_confirmBtn')
                     if self.wan2:
                         input_ip = self._current_ip_address.replace(",", ";")
+                        logger.info(f"input_ip类型：{type(input_ip)}")
+                        logger.info(f"input_ip：{input_ip}")
                     else:
                         input_ip = self._current_ip_address
                     input_area.fill(input_ip)  # 填充 IP 地址
