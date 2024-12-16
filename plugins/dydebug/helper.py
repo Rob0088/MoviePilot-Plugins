@@ -1,6 +1,6 @@
 import re
-import requests
-from playwright.sync_api import sync_playwright
+# import requests
+# from playwright.sync_api import sync_playwright
 from app.modules.wechat import WeChat
 from app.schemas.types import NotificationType,MessageChannel
 
@@ -418,32 +418,23 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def get_ipv4(url):
+    def get_ipv4(page, url: str):
         """返回多个中国 IP 地址，逗号分隔"""
-        # 创建一个解析器实例
-        with sync_playwright() as p:
-            # 启动浏览器
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+        # 导航到目标页面
+        page.goto(url)
 
-            # 导航到目标页面
-            page.goto(url)
+        # 等待一段时间，让所有动态渲染的内容加载完成
+        page.wait_for_timeout(5000)  # 等待 5 秒钟，确保动态渲染完成
 
-            # 等待一段时间，让所有动态渲染的内容加载完成
-            page.wait_for_timeout(5000)  # 等待 5 秒钟，确保动态渲染完成
+        # 调用解析器解析数据
+        ipv4_addresses, locations = IpLocationParser._parse(page, url)
 
-            # 调用解析器解析数据
-            ipv4_addresses, locations = IpLocationParser._parse(page, url)
+        # 筛选出属于中国的 IP 地址
+        china_ips = [
+            ip for ip, location in zip(ipv4_addresses, locations)
+            if 'China' in location or '中国' in location
+        ]
 
-            # 关闭浏览器
-            browser.close()
-
-            # 筛选出属于中国的 IP 地址
-            china_ips = [
-                ip for ip, location in zip(ipv4_addresses, locations)
-                if 'China' in location or '中国' in location
-            ]
-
-            # 返回逗号分隔的字符串
-            return ', '.join(china_ips)
+        # 返回逗号分隔的字符串
+        return ', '.join(china_ips)
 
