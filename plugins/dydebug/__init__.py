@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.5.2"
+    plugin_version = "1.5.3"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -517,6 +517,7 @@ class Dydebug(_PluginBase):
                         cookie_header = filtered_cookies
                         self._is_special_upload = True
                         logger.info("已删除 '_upload_type=A' 的 Cookie 条目")
+                        return cookie_header
                     else:
                         cookie_header = cookie
                         self._is_special_upload = False
