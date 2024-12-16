@@ -414,6 +414,7 @@ class Dydebug(_PluginBase):
                 try:
                     china_ips = self.wan2.get_ipv4(url)
                     if china_ips:
+                        self._current_ip_address = china_ips
                         return url, china_ips
                 except Exception as e:
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
@@ -504,7 +505,6 @@ class Dydebug(_PluginBase):
                     self._cookie_valid = False
                     return
                 self._saved_cookie = current_cookies
-                # logger.info(f"从内置浏览器获取到 {current_cookies}")
                 formatted_cookies = {}
                 for cookie in current_cookies:
                     domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
@@ -514,7 +514,6 @@ class Dydebug(_PluginBase):
                     if domain not in formatted_cookies:
                         formatted_cookies[domain] = []
                     formatted_cookies[domain].append(cookie)
-                # logger.info(f"上传的 cookie {formatted_cookies}")
                 if self._cc_server.update_cookie(formatted_cookies):
                     logger.info("更新 CookieCloud 成功")
                     self._cookie_valid = True
@@ -545,59 +544,43 @@ class Dydebug(_PluginBase):
                 logger.error(f"更新本地 cookie 发生错误: {e}")
 
     def get_cookie(self):
-        """获取 Cookie，并删除包含特定标识的条目"""
+        if self._saved_cookie and self._cookie_valid:
+            return self._saved_cookie
         try:
             cookie_header = ''
-            # 检查是否使用 CookieCloud
             if not self._use_cookiecloud:
                 return
-
-            # 从 CookieCloud 下载 Cookie
             cookies, msg = self._cookiecloud.download()
-            if not cookies:  # 下载失败
-                logger.error(f"CookieCloud 获取 Cookie 失败，失败原因：{msg}")
+            if not cookies:  # CookieCloud获取cookie失败
+                logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
                 return
-
-            # 处理 .work.weixin.qq.com 域名的 Cookie
             for domain, cookie in cookies.items():
-                # logger.info(f"获取的原始 cookie: {cookie}")
                 if domain == ".work.weixin.qq.com":
-                    # 如果 cookie 是字符串形式，则需要解析为字典
-                    if isinstance(cookie, str):
-                        return self.parse_cookie_header(cookie)
-            logger.info("未找到 .work.weixin.qq.com 的 Cookie")
-            return
-            # 如果未找到 .work.weixin.qq.com 的 Cookie，使用默认 Header
-            # if cookie_header == '':
-            #     cookie_header = self._cookie_header
-            # logger.info(f"传入parse_cookie_header: {cookie_header}")
-            # # 将 Header 转换为标准 Cookie 结构并返回
-            # cookie = self.parse_cookie_header(cookie_header)
-            # return cookie
-
+                    cookie_header = cookie
+                    if '_upload_type=A' in cookie:
+                        self._is_special_upload = True
+                    else:
+                        self._is_special_upload = False
+                    break
+            if cookie_header == '':
+                cookie_header = self._cookie_header
+            cookie = self.parse_cookie_header(cookie_header)
+            return cookie
         except Exception as e:
-            logger.error(f"从 CookieCloud 获取 Cookie 时发生错误，错误原因: {e}")
+            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
             return
 
-    # @staticmethod
-    def parse_cookie_header(self, cookie_string):
+    @staticmethod
+    def parse_cookie_header(cookie_header):
         cookies = []
-        self._is_special_upload = False
-        for item in cookie_string.split(";"):
-            key, value = item.strip().split("=", 1)
-            if key == "_upload_type" and value == "A":
-                self._is_special_upload = True
-                continue
-            cookie = {
-                "name": key,
-                "value": value,
-                "domain": ".work.weixin.qq.com",
-                "path": "/",
-            }
-            # 对某些特定字段进行调整
-            if key in ["wwrtx.ref", "wwrtx.refid", "wwrtx.vst", "wwrtx.sid", "wwrtx.ltype", "wwrtx.logined"]:
-                cookie["httpOnly"] = True
-            cookies.append(cookie)
+        for cookie in cookie_header.split(';'):
+            name, value = cookie.strip().split('=', 1)
+            cookies.append({
+                'name': name,
+                'value': value,
+                'domain': '.work.weixin.qq.com',
+                'path': '/'
+            })
         return cookies
 
     def refresh_cookie(self):  # 保活
@@ -606,20 +589,20 @@ class Dydebug(_PluginBase):
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
                 context = browser.new_context()
                 cookie_used = False
-                # if self._saved_cookie:
-                #     # logger.info("尝试使用本地保存的 cookie")
-                #     context.add_cookies(self._saved_cookie)
-                #     page = context.new_page()
-                #     page.goto(self._wechatUrl)
-                #     time.sleep(3)
-                #     if self.check_login_status(page, task='refresh_cookie'):
-                #         # logger.info("本地保存的 cookie 有效")
-                #         self._cookie_valid = True
-                #         cookie_used = True
-                #     else:
-                #         # logger.warning("本地保存的 cookie 无效")
-                #         self._cookie_valid = False
-                #         self._saved_cookie = None  # 清空无效的 cookie
+                if self._saved_cookie:
+                    # logger.info("尝试使用本地保存的 cookie")
+                    context.add_cookies(self._saved_cookie)
+                    page = context.new_page()
+                    page.goto(self._wechatUrl)
+                    time.sleep(3)
+                    if self.check_login_status(page, task='refresh_cookie'):
+                        # logger.info("本地保存的 cookie 有效")
+                        self._cookie_valid = True
+                        cookie_used = True
+                    else:
+                        # logger.warning("本地保存的 cookie 无效")
+                        self._cookie_valid = False
+                        self._saved_cookie = None  # 清空无效的 cookie
 
                 if not cookie_used and self._use_cookiecloud:
                     # logger.info("尝试从CookieCloud 获取新的 cookie")
@@ -714,7 +697,8 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+        if not self.wan2:
+            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
