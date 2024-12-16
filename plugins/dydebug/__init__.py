@@ -703,8 +703,8 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        if not self.wan2:
-            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+        # if not self.wan2:
+        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
