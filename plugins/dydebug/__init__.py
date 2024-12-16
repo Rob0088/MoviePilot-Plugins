@@ -383,6 +383,7 @@ class Dydebug(_PluginBase):
             logger.error("没有可用的CookieCloud服务器")
 
     def get_ip_from_url(self, input_data) -> (str, str):
+        self.wan2 = None
         # 根据输入解析 URL 列表
         if isinstance(input_data, str) and "wan2" in input_data:
             self.wan2 = IpLocationParser()
