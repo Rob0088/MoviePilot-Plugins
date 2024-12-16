@@ -423,7 +423,7 @@ class IpLocationParser:
         # 创建一个解析器实例
         with sync_playwright() as p:
             # 启动浏览器
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
             # 导航到目标页面
