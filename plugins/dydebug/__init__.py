@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.8"
+    plugin_version = "1.6.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -62,6 +62,8 @@ class Dydebug(_PluginBase):
     _my_send = None
     # 多wan口支持
     wan2 = None
+    # 当前检测url
+    wan2_url = None
     # 保存cookie
     _saved_cookie = None
     # 通知方式token/api
@@ -309,7 +311,11 @@ class Dydebug(_PluginBase):
             logger.warning("cookie已失效请及时更新,本次不检查公网IP")
 
     def CheckIP(self):
-        url, ip_address = self.get_ip_from_url() 
+        if self.wan2:
+            ip_address = self.wan2.read_all_ips()
+            url = self.wan2_url
+        else:
+            url, ip_address = self.get_ip_from_url()
 
         if ip_address == "获取IP失败" or not url:
             logger.error("获取IP失败 不操作可信IP")
@@ -337,7 +343,7 @@ class Dydebug(_PluginBase):
             # 检查每个新 IP 是否存在，若不存在则添加并返回 True
             for ip in get_ips:
                 if ip not in saved_ips:
-                    self.wan2.add_ip(ip)
+                    self.wan2.add_ips(ip)
                     return True
         else:
             # 检查 IP 是否变化
@@ -403,7 +409,7 @@ class Dydebug(_PluginBase):
                     try:
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
-                            # self._current_ip_address = china_ips
+                            self.wan2_url = url
                             browser.close()
                             return url, china_ips
                     except Exception as e:
