@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.6.7"
+    plugin_version = "1.6.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -142,7 +142,7 @@ class Dydebug(_PluginBase):
             self._current_ip_address = self.wan2.read_all_ips()  # 从文件中读取
         else:
             self.wan2 = None
-            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)  # 直接从网页获取
+            _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -309,7 +309,7 @@ class Dydebug(_PluginBase):
             logger.warning("cookie已失效请及时更新,本次不检查公网IP")
 
     def CheckIP(self):
-        url, ip_address = self.get_ip_from_url(self._input_id_list)
+        url, ip_address = self.get_ip_from_url() 
 
         if ip_address == "获取IP失败" or not url:
             logger.error("获取IP失败 不操作可信IP")
@@ -367,13 +367,13 @@ class Dydebug(_PluginBase):
             self._cc_server = None
             logger.error("没有可用的CookieCloud服务器")
 
-    def get_ip_from_url(self, input_data) -> (str, str):
+    def get_ip_from_url(self) -> (str, str):
         # 根据输入解析 URL 列表
-        if isinstance(input_data, str) and "||" in input_data:
-            _, url_list = input_data.split("||", 1)
+        if isinstance(self._input_id_list, str) and "||" in self._input_id_list:
+            _, url_list = self._input_id_list.split("||", 1)
             urls = url_list.split(",")
-        elif isinstance(input_data, list):
-            urls = input_data
+        elif isinstance(self._input_id_list, list):
+            urls = self._input_id_list
         else:
             urls = self._ip_urls
 
@@ -691,7 +691,7 @@ class Dydebug(_PluginBase):
         if self.wan2:  # 多wan口从文件读取 ip
             self._current_ip_address = self._wan2.read_all_ips()
         else:
-            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+            _, self._current_ip_address = self.get_ip_from_url()
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
