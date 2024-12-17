@@ -576,6 +576,8 @@ class Dydebug(_PluginBase):
         cookies = []
         for cookie in cookie_header.split(';'):
             name, value = cookie.strip().split('=', 1)
+            if name == '_upload_type' and value == 'A':
+                continue
             cookies.append({
                 'name': name,
                 'value': value,
