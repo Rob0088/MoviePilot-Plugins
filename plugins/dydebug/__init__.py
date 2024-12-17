@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.1"
+    plugin_version = "1.7.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -313,6 +313,9 @@ class Dydebug(_PluginBase):
     def CheckIP(self):
         if self.wan2:
             ip_address = self.wan2.read_all_ips()
+            if not ip_address:
+                time.sleep(7)
+                ip_address = self.wan2.read_all_ips()
             url = self.wan2_url
         else:
             url, ip_address = self.get_ip_from_url()
