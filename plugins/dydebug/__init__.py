@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.4"
+    plugin_version = "1.7.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -314,7 +314,8 @@ class Dydebug(_PluginBase):
         if self.wan2:
             ip_address = self.wan2.read_all_ips()
             url = self.wan2_url
-            if ip_address == "获取IP失败":
+            if ip_address == "获取IP失败" or not url:
+                logger.error("7秒后重新读取IP")
                 time.sleep(7)
                 ip_address = self.wan2.read_all_ips()
                 url = self.wan2_url
