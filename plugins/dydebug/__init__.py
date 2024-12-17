@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.0"
+    plugin_version = "1.7.1"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -343,7 +343,7 @@ class Dydebug(_PluginBase):
             # 检查每个新 IP 是否存在，若不存在则添加并返回 True
             for ip in get_ips:
                 if ip not in saved_ips:
-                    self.wan2.add_ips(ip)
+                    # self.wan2.add_ips(ip)
                     return True
         else:
             # 检查 IP 是否变化
@@ -410,6 +410,7 @@ class Dydebug(_PluginBase):
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
                             self.wan2_url = url
+                            self.wan2.add_ips(china_ips)
                             browser.close()
                             return url, china_ips
                     except Exception as e:
