@@ -125,19 +125,24 @@ class Dydebug(_PluginBase):
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
-            self._current_ip_address = config.get("current_ip_address")
+            # self._current_ip_address = config.get("current_ip_address")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
-            self._ip_changed = config.get("ip_changed")
+            # self._ip_changed = config.get("ip_changed")
         if self.version != "v1":
             self._my_send = MySender(self._notification_token, func=self.post_message)
         else:
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
-        _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
+        if "||wan2" in self._input_id_list:  # 多wan口
+            self.wan2 = IpLocationParser(self._settings_file_path)
+            self._current_ip_address = self.wan2.read_all_ips()  # 从文件中读取
+        else:
+            self.wan2 = None
+            _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)  # 直接从网页获取
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -176,6 +181,15 @@ class Dydebug(_PluginBase):
             except Exception as err:
                 logger.error(f"定时任务配置错误：{err}")
                 self.systemmessage.put(f"执行周期配置错误：{err}")
+
+            if self.wan2:
+                try:
+                    self._scheduler.add_job(func=self.get_ip_from_url,
+                                            trigger=CronTrigger.from_crontab(self._cron),
+                                            name="多wan口公网IP检测")
+                except Exception as err:
+                    logger.error(f"多wan口公网IP检测定时任务配置错误：{err}")
+                    self.systemmessage.put(f"执行周期配置错误：{err}")
 
             # 启动任务
             if self._scheduler.get_jobs():
@@ -296,71 +310,42 @@ class Dydebug(_PluginBase):
 
     def CheckIP(self):
         url, ip_address = self.get_ip_from_url(self._input_id_list)
-        if not self.wan2:
-            if url and ip_address:
-                logger.info(f"IP获取成功: {url}: {ip_address}")
 
-            # 如果所有 URL 请求失败
-            if ip_address == "获取IP失败" or not url:
-                logger.error("获取IP失败 不操作可信IP")
-                return False
+        if ip_address == "获取IP失败" or not url:
+            logger.error("获取IP失败 不操作可信IP")
+            return False
 
-            elif not self._ip_changed:  # 上次修改IP失败
-                logger.info("上次IP修改IP失败 继续尝试修改IP")
-                self._current_ip_address = ip_address
-                return True
+        # 成功获取 IP，记录日志
+        if url and ip_address:
+            logger.info(f"IP获取成功: {url}: {ip_address}")
 
+        # 上次修改 IP 失败时，继续尝试修改
+        if not self._ip_changed:
+            logger.info("上次IP修改IP失败 继续尝试修改IP")
+            self._current_ip_address = ip_address
+            return True
+
+        # 如果有 wan2，则处理新增的 IP 地址
+        if self.wan2:
+            get_ips = [ip_address] if isinstance(ip_address, str) else ip_address
+            saved_ips = self.wan2.read_all_ips()
+
+            # 如果保存的 IP 地址是字符串，转换成列表
+            if isinstance(saved_ips, str):
+                saved_ips = saved_ips.split(";")
+
+            # 检查每个新 IP 是否存在，若不存在则添加并返回 True
+            for ip in get_ips:
+                if ip not in saved_ips:
+                    self.wan2.add_ip(ip)
+                    return True
+        else:
             # 检查 IP 是否变化
             if ip_address != self._current_ip_address:
                 logger.info("检测到IP变化")
                 self._current_ip_address = ip_address
                 return True
-            else:
-                return False
-        else:
-            if url and ip_address:
-                logger.info(f"IP获取成功: {url}: {ip_address}")
-
-            # 如果所有 URL 请求失败
-            if ip_address == "获取IP失败" or not url:
-                logger.error("获取IP失败 不操作可信IP")
-                return False
-
-            elif not self._ip_changed:  # 上次修改IP失败
-                logger.info("上次IP修改IP失败 继续尝试修改IP")
-                self._current_ip_address = ip_address
-                return True
-
-            # 处理只有单个 IP 地址的情况
-            if isinstance(ip_address, str):  # 刚获取到的IP
-                get_ips = [ip_address]
-            else:
-                get_ips = ip_address
-            if isinstance(self._current_ip_address, str):  # 之前保存的IP
-                save_ips = [self._current_ip_address]
-            else:
-                save_ips = self._current_ip_address
-            # 去重并排序，确保比较时顺序不影响结果
-            save_ips_sorted = sorted(set(save_ips))
-            get_ips_sorted = sorted(set(get_ips))
-
-            # 如果当前 IP 地址的数量少于之前的数量
-            if len(get_ips_sorted) < len(save_ips_sorted):
-                # 检查剩余的 IP 是否都在之前的 IP 列表中
-                for ip in get_ips_sorted:
-                    if ip not in save_ips_sorted:
-                        return True  # 如果有 IP 不在之前的列表中，说明变化
-                return False  # 如果剩余的 IP 都包含在之前的 IP 中，认为没有变化
-
-            # 如果两个列表的 IP 地址数量不一致，视为发生变化
-            if len(save_ips_sorted) != len(get_ips_sorted):
-                return True
-
-            # 如果两个列表中的 IP 地址不同，视为发生变化
-            if save_ips_sorted != get_ips_sorted:
-                return True
-            # 否则认为 IP 没有变化
-            return False
+        return False
 
     def try_connect_cc(self):
         if not self._use_cookiecloud:  # 不使用CookieCloud
@@ -383,12 +368,8 @@ class Dydebug(_PluginBase):
             logger.error("没有可用的CookieCloud服务器")
 
     def get_ip_from_url(self, input_data) -> (str, str):
-        self.wan2 = None
         # 根据输入解析 URL 列表
-        if isinstance(input_data, str) and "wan2" in input_data:
-            self.wan2 = IpLocationParser()
-            urls = ["http://revproxy.ustc.edu.cn:8000/", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
-        elif isinstance(input_data, str) and "||" in input_data:
+        if isinstance(input_data, str) and "||" in input_data:
             _, url_list = input_data.split("||", 1)
             urls = url_list.split(",")
         elif isinstance(input_data, list):
@@ -411,6 +392,8 @@ class Dydebug(_PluginBase):
                         logger.warning(f"{url} 获取IP失败, Error: {e}")
             return None, "获取IP失败"
         else:
+            urls = ["http://revproxy.ustc.edu.cn:8000/", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
+            random.shuffle(urls)
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
                 # 启动浏览器
@@ -420,7 +403,7 @@ class Dydebug(_PluginBase):
                     try:
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
-                            self._current_ip_address = china_ips
+                            # self._current_ip_address = china_ips
                             browser.close()
                             return url, china_ips
                     except Exception as e:
@@ -705,7 +688,9 @@ class Dydebug(_PluginBase):
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
                 "配置")
         ]
-        if not self.wan2:
+        if self.wan2:  # 多wan口从文件读取 ip
+            self._current_ip_address = self._wan2.read_all_ips()
+        else:
             _, self._current_ip_address = self.get_ip_from_url(self._input_id_list)
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
@@ -733,13 +718,8 @@ class Dydebug(_PluginBase):
                     # logger.info(f"已找到文本框")
                     input_area = page.locator('textarea.js_ipConfig_textarea')
                     confirm = page.locator('.js_ipConfig_confirmBtn')
-                    if self.wan2:
-                        input_ip = self._current_ip_address.replace(",", ";")
-                        # logger.info(f"input_ip类型：{type(input_ip)}")
-                    else:
-                        input_ip = self._current_ip_address
                     # logger.info(f"即将输入的内容：'{input_ip}'")
-                    input_area.fill(input_ip)  # 填充 IP 地址
+                    input_area.fill(self._current_ip_address)  # 填充 IP 地址
                     confirm.click()  # 点击确认按钮
                     time.sleep(3)  # 等待处理
                     self._ip_changed = True
