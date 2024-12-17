@@ -101,27 +101,31 @@ class PyCookieCloud:
         return md5.hexdigest()[:16]
 
     @staticmethod
-    def load_cookie_lifetime(settings_file: str = None):    # 返回时间戳 单位秒
+    def load_cookie_lifetime(settings_file: str = None):
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
+                # 只返回 _cookie_lifetime 字段的值，若不存在则返回 0
                 return settings.get('_cookie_lifetime', 0)
         else:
             return 0
 
     @staticmethod
-    def save_cookie_lifetime(settings_file, cookie_lifetime):  # 传入时间戳 单位秒
+    def save_cookie_lifetime(settings_file, cookie_lifetime):
+        data = {}
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as file:
+                data = json.load(file)
+
+        # 只更新 _cookie_lifetime 字段，其它字段保持不变
+        data['_cookie_lifetime'] = cookie_lifetime
+
         with open(settings_file, 'w') as file:
-            json.dump({'_cookie_lifetime': cookie_lifetime}, file)
+            json.dump(data, file, indent=4)
 
     @staticmethod
     def increase_cookie_lifetime(settings_file, seconds: int):
-        if os.path.exists(settings_file):
-            with open(settings_file, 'r') as file:
-                settings = json.load(file)
-                current_lifetime = settings.get('_cookie_lifetime', 0)
-        else:
-            current_lifetime = 0
+        current_lifetime = PyCookieCloud.load_cookie_lifetime(settings_file)
         new_lifetime = current_lifetime + seconds
         # 保存新的 _cookie_lifetime
         PyCookieCloud.save_cookie_lifetime(settings_file, new_lifetime)
@@ -478,8 +482,23 @@ class IpLocationParser:
         # 去重并限制 IP 数量
         new_ips = self._limit_and_deduplicate_ips(new_ips)
 
+        # 如果文件不存在，提前创建并初始化文件
+        if not os.path.exists(self._settings_file_path):
+            # logger.warning(f"配置文件不存在, 创建新文件并初始化配置: {self._settings_file_path}")
+
+            # 创建一个空的初始配置
+            data = {"ips": new_ips}
+
+            # 写入新配置文件
+            with open(self._settings_file_path, 'w') as f:
+                json.dump(data, f, indent=4)
+
+            self._ips = ";".join(new_ips)  # 更新内部的 IP 地址字符串
+            # logger.info(f"成功创建新的配置文件并写入 IP 地址: {self._ips}")
+            return
+
+        # 如果文件存在，则读取现有数据，保留原有字段
         try:
-            # 读取现有数据，保留原有字段
             with open(self._settings_file_path, 'r') as f:
                 data = json.load(f)
 
@@ -491,10 +510,9 @@ class IpLocationParser:
                 json.dump(data, f, indent=4)
 
             self._ips = ";".join(new_ips)  # 更新内部的 IP 地址字符串
-            # print(f"成功写入 {len(new_ips)} 个新的 IP 地址")
         except (json.JSONDecodeError, IOError) as e:
-            # print(f"写入配置文件时出错: {e}")
             pass
+            # logger.error(f"读取或写入配置文件时出错: {e}")
 
     def add_ips(self, new_ips):
         """
