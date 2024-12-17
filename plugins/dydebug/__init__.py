@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.5"
+    plugin_version = "1.7.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -141,7 +141,7 @@ class Dydebug(_PluginBase):
             self._my_send = None
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
-            self._current_ip_address = self.wan2.read_all_ips()  # 从文件中读取
+            # self._current_ip_address = self.wan2.read_all_ips()  # 从文件中读取
         else:
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
@@ -314,11 +314,6 @@ class Dydebug(_PluginBase):
         if self.wan2:
             ip_address = self.wan2.read_all_ips()
             url = self.wan2_url
-            if ip_address == "获取IP失败" or not url:
-                logger.error("7秒后重新读取IP")
-                time.sleep(7)
-                ip_address = self.wan2.read_all_ips()
-                url = self.wan2_url
         else:
             url, ip_address = self.get_ip_from_url()
 
@@ -411,6 +406,8 @@ class Dydebug(_PluginBase):
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
                 for url in urls:
+                    if url == "https://ip.skk.moe/multi":
+                        logger.info("尝试使用url:https://ip.skk.moe/multi")
                     try:
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
