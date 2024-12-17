@@ -453,7 +453,7 @@ class IpLocationParser:
                 # 从列表读取 IP 地址，转换为分号分隔的字符串
                 return ";".join(data.get("ips", []))
         except (json.JSONDecodeError, IOError) as e:
-            print(f"读取配置文件时出错: {e}")
+            # print(f"读取配置文件时出错: {e}")
             return ""
 
     def _limit_and_deduplicate_ips(self, ips):
@@ -491,9 +491,10 @@ class IpLocationParser:
                 json.dump(data, f, indent=4)
 
             self._ips = ";".join(new_ips)  # 更新内部的 IP 地址字符串
-            print(f"成功写入 {len(new_ips)} 个新的 IP 地址")
+            # print(f"成功写入 {len(new_ips)} 个新的 IP 地址")
         except (json.JSONDecodeError, IOError) as e:
-            print(f"写入配置文件时出错: {e}")
+            # print(f"写入配置文件时出错: {e}")
+            pass
 
     def add_ips(self, new_ips):
         """
@@ -512,5 +513,5 @@ class IpLocationParser:
         updated_ips = self._limit_and_deduplicate_ips(updated_ips)
 
         self.overwrite_ips(updated_ips)  # 使用覆盖写入方法更新 IP 地址列表
-        print(f"成功添加 {len(new_ips)} 个新的 IP 地址")
+        # print(f"成功添加 {len(new_ips)} 个新的 IP 地址")
 
