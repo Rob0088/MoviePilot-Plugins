@@ -558,10 +558,6 @@ class Dydebug(_PluginBase):
             for domain, cookie in cookies.items():
                 if domain == ".work.weixin.qq.com":
                     cookie_header = cookie
-                    if '_upload_type=A' in cookie:
-                        self._is_special_upload = True
-                    else:
-                        self._is_special_upload = False
                     break
             if cookie_header == '':
                 cookie_header = self._cookie_header
@@ -571,12 +567,13 @@ class Dydebug(_PluginBase):
             logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
             return
 
-    @staticmethod
-    def parse_cookie_header(cookie_header):
+    # @staticmethod
+    def parse_cookie_header(self, cookie_header):
         cookies = []
         for cookie in cookie_header.split(';'):
             name, value = cookie.strip().split('=', 1)
             if name == '_upload_type' and value == 'A':
+                self._is_special_upload = True
                 continue
             cookies.append({
                 'name': name,
