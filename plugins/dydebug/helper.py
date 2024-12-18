@@ -1,7 +1,4 @@
 import re
-from app.modules.wechat import WeChat
-from app.schemas.types import NotificationType,MessageChannel
-
 import os
 import json
 import requests
@@ -10,6 +7,9 @@ import hashlib
 from typing import Dict, Any
 from Crypto import Random
 from Crypto.Cipher import AES
+
+from app.modules.wechat import WeChat
+from app.schemas.types import NotificationType, MessageChannel
 
 
 def bytes_to_key(data: bytes, salt: bytes, output=48) -> bytes:
@@ -300,25 +300,22 @@ class MySender:
 
 class IpLocationParser:
     def __init__(self, settings_file_path, max_ips=4):
-        self._settings_file_path = settings_file_path  # 配置文件路径
+        self._settings_file_path = settings_file_path
         self._max_ips = max_ips  # 最大历史IP数量
         self._ips = self.read_ips("ips")  # 初始化时读取已存储的 IP 地址
 
     @staticmethod
     def _parse(page, url):
-        """根据 URL 确定使用的函数"""
-        if url == "https://ip.orz.tools":
-            parser_method = IpLocationParser._parse_ip_orz_tools
-        elif url == "https://ip.skk.moe/multi":
-            parser_method = IpLocationParser._parse_ip_skk_moe
-        elif url == "http://revproxy.ustc.edu.cn:8000":
-            parser_method = IpLocationParser._parse_ip_ustc
-        else:
-            # 未知 URL
+        # 定义 URL 到解析函数的映射
+        parser_methods = {
+            "https://ip.orz.tools": IpLocationParser._parse_ip_orz_tools,
+            "https://ip.skk.moe/multi": IpLocationParser._parse_ip_skk_moe,
+            "http://revproxy.ustc.edu.cn:8000": IpLocationParser._parse_ip_ustc,
+        }
+        parser_method = parser_methods.get(url)
+        if parser_method is None:
             return [], []
-        # 调用对应的解析方法
-        ipv4_addresses, locations = parser_method(page)
-        return ipv4_addresses, locations
+        return parser_method(page)
 
     @staticmethod
     def _remove_duplicates(ipv4_addresses, locations):
@@ -424,13 +421,10 @@ class IpLocationParser:
         """返回多个中国 IP 地址，逗号分隔"""
         # 导航到目标页面
         page.goto(url)
-
         # 等待一段时间，让所有动态渲染的内容加载完成
         page.wait_for_timeout(5000)  # 等待 5 秒钟，确保动态渲染完成
-
         # 调用解析器解析数据
         ipv4_addresses, locations = IpLocationParser._parse(page, url)
-
         # 筛选出属于中国的 IP 地址
         china_ips = [
             ip for ip, location in zip(ipv4_addresses, locations)
@@ -526,3 +520,4 @@ class IpLocationParser:
 
         # 写入更新后的 IP 地址
         self.overwrite_ips(field, updated_ips)
+
