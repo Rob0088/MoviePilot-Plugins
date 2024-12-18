@@ -398,26 +398,30 @@ class Dydebug(_PluginBase):
                         logger.warning(f"{url} 获取IP失败, Error: {e}")
             return None, "获取IP失败"
         else:
-            urls = ["http://revproxy.ustc.edu.cn:8000/", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
+            urls = ["http://revproxy.ustc.edu.cn:8000", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
             random.shuffle(urls)
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
-                # 启动浏览器
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
+                browser = None  # 定义浏览器变量
                 for url in urls:
-                    if url == "https://ip.skk.moe/multi":
-                        logger.info("尝试使用url:https://ip.skk.moe/multi")
                     try:
+                        # 启动浏览器
+                        if url == "https://ip.skk.moe/multi":
+                            browser = p.chromium.launch(headless=False, args=['--lang=zh-CN'])
+                        else:
+                            browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
+                        page = browser.new_page()
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
                             self.wan2_url = url
                             self.wan2.add_ips(china_ips)
-                            browser.close()
-                            return url, china_ips
+                            return url, china_ips  # 成功获取到IP后返回
                     except Exception as e:
                         logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
-            browser.close()
+                    finally:
+                        if browser:
+                            browser.close()
+                        browser = None  # 重置浏览器变量
             return None, "获取IP失败"
 
     def find_qrc(self, page):
