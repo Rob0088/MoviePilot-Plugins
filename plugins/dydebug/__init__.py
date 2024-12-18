@@ -701,7 +701,7 @@ class Dydebug(_PluginBase):
                 "配置")
         ]
         if self.wan2:  # 多wan口从文件读取 ip
-            self._current_ip_address = self._wan2.read_all_ips()
+            self._current_ip_address = self.wan2.read_all_ips()
         else:
             _, self._current_ip_address = self.get_ip_from_url()
         if "||" in self._input_id_list:
