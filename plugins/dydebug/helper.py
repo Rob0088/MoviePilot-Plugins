@@ -1,6 +1,4 @@
 import re
-# import requests
-# from playwright.sync_api import sync_playwright
 from app.modules.wechat import WeChat
 from app.schemas.types import NotificationType,MessageChannel
 
@@ -105,7 +103,6 @@ class PyCookieCloud:
         if os.path.exists(settings_file):
             with open(settings_file, 'r') as file:
                 settings = json.load(file)
-                # 只返回 _cookie_lifetime 字段的值，若不存在则返回 0
                 return settings.get('_cookie_lifetime', 0)
         else:
             return 0
@@ -314,7 +311,7 @@ class IpLocationParser:
             parser_method = IpLocationParser._parse_ip_orz_tools
         elif url == "https://ip.skk.moe/multi":
             parser_method = IpLocationParser._parse_ip_skk_moe
-        elif url == "http://revproxy.ustc.edu.cn:8000/":
+        elif url == "http://revproxy.ustc.edu.cn:8000":
             parser_method = IpLocationParser._parse_ip_ustc
         else:
             # 未知 URL
@@ -439,7 +436,6 @@ class IpLocationParser:
             ip for ip, location in zip(ipv4_addresses, locations)
             if 'China' in location or '中国' in location
         ]
-
         # 返回逗号分隔的字符串
         return ';'.join(china_ips)
 
@@ -533,3 +529,46 @@ class IpLocationParser:
         self.overwrite_ips(updated_ips)  # 使用覆盖写入方法更新 IP 地址列表
         # print(f"成功添加 {len(new_ips)} 个新的 IP 地址")
 
+    def read_url_ips(self):
+        """
+        获取 JSON 文件中 `url_ip` 字段的所有 IP 地址。
+        :return: IP 地址列表（如果字段不存在则返回空列表）
+        """
+        if not os.path.exists(self._settings_file_path):
+            return []  # 文件不存在，返回空列表
+
+        try:
+            with open(self._settings_file_path, 'r') as f:
+                data = json.load(f)
+                return data.get("url_ip", [])  # 返回 `url_ip` 字段内容
+        except (json.JSONDecodeError, IOError):
+            return []  # 读取失败，返回空列表
+
+    def overwrite_url_ips(self, new_ips):
+        """
+        覆盖写入 `url_ip` 字段的新 IP 地址列表。
+        :param new_ips: 新的 IP 地址列表或分号间隔的字符串
+        """
+        # 如果输入是字符串，将其转换为列表
+        if isinstance(new_ips, str):
+            new_ips = new_ips.split(";")
+
+        # 去重并限制 IP 数量
+        new_ips = self._limit_and_deduplicate_ips(new_ips)
+
+        # 读取现有数据（如果文件不存在，则初始化空数据）
+        if os.path.exists(self._settings_file_path):
+            try:
+                with open(self._settings_file_path, 'r') as f:
+                    data = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                data = {}
+        else:
+            data = {}
+
+        # 更新 `url_ip` 字段
+        data["url_ip"] = new_ips
+
+        # 写入文件
+        with open(self._settings_file_path, 'w') as f:
+            json.dump(data, f, indent=4)
