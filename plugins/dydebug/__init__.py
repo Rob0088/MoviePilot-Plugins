@@ -141,7 +141,7 @@ class Dydebug(_PluginBase):
             self._my_send = None
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
-            # self._current_ip_address = self.wan2.read_all_ips()  # 从文件中读取
+            self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
         else:
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
@@ -312,7 +312,7 @@ class Dydebug(_PluginBase):
 
     def CheckIP(self):
         if self.wan2:
-            ip_address = self.wan2.read_url_ips()
+            ip_address = self.wan2.read_ips("url_ip")
             url = self.wan2_url
         else:
             url, ip_address = self.get_ip_from_url()
@@ -334,7 +334,7 @@ class Dydebug(_PluginBase):
         # 如果有 wan2，则处理新增的 IP 地址
         if self.wan2:
             url_ips = [ip_address] if isinstance(ip_address, str) else ip_address
-            saved_ips = self.wan2.read_all_ips()
+            saved_ips = self.wan2.read_ips("ips")
 
             # 如果保存的 IP 地址是字符串，转换成列表
             if isinstance(saved_ips, str):
@@ -343,7 +343,7 @@ class Dydebug(_PluginBase):
             # 检查每个新 IP 是否存在，若不存在则添加并返回 True
             for ip in url_ips:
                 if ip not in saved_ips:
-                    self.wan2.add_ips(ip)  # 将url获取到的新IP添加到ips字段
+                    self.wan2.add_ips("ips", ip)  # 将url获取到的新IP添加到ips字段
                     return True
         else:
             # 检查 IP 是否变化
@@ -414,7 +414,7 @@ class Dydebug(_PluginBase):
                         china_ips = self.wan2.get_ipv4(page, url)
                         if china_ips:
                             self.wan2_url = url
-                            self.wan2.overwrite_url_ips(china_ips)  # 将获取到的IP写入文件 覆盖写入
+                            self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
                             return url, china_ips  # 成功获取到IP后返回
                     except Exception as e:
                         logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
@@ -701,7 +701,7 @@ class Dydebug(_PluginBase):
                 "配置")
         ]
         if self.wan2:  # 多wan口从文件读取 ip
-            self._current_ip_address = self.wan2.read_all_ips()
+            self._current_ip_address = self.wan2.read_ips("ips")
         else:
             _, self._current_ip_address = self.get_ip_from_url()
         if "||" in self._input_id_list:
