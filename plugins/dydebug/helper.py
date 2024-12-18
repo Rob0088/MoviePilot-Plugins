@@ -302,7 +302,7 @@ class IpLocationParser:
     def __init__(self, settings_file_path, max_ips=4):
         self._settings_file_path = settings_file_path  # 配置文件路径
         self._max_ips = max_ips  # 最大历史IP数量
-        self._ips = self.read_all_ips()  # 初始化时读取已存储的 IP 地址
+        self._ips = self.read_ips("ips")  # 初始化时读取已存储的 IP 地址
 
     @staticmethod
     def _parse(page, url):
