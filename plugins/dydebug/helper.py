@@ -439,115 +439,38 @@ class IpLocationParser:
         # 返回逗号分隔的字符串
         return ';'.join(china_ips)
 
-    def read_all_ips(self):
-        """
-        读取配置文件中的所有 IP 地址（以字符串形式返回，多个 IP 用分号间隔）。
-        如果文件不存在，返回空字符串。
-        """
-        if not os.path.exists(self._settings_file_path):
-            return ""  # 如果文件不存在，返回空字符串
-
-        try:
-            with open(self._settings_file_path, 'r') as f:
-                data = json.load(f)
-                # 从列表读取 IP 地址，转换为分号分隔的字符串
-                return ";".join(data.get("ips", []))
-        except (json.JSONDecodeError, IOError) as e:
-            # print(f"读取配置文件时出错: {e}")
-            return ""
-
     def _limit_and_deduplicate_ips(self, ips):
         """
         去重并限制 IP 地址数量，最多保存 _max_ips 个 IP 地址。
         :param ips: IP 地址列表
         :return: 去重后的 IP 地址列表，最多 _max_ips 个
         """
-        # 去重并按顺序保留最新的 IP 地址
-        unique_ips = list(dict.fromkeys(ips))  # 去重并保留顺序
+        # 去重并保留顺序
+        unique_ips = list(dict.fromkeys(ips))
         return unique_ips[:self._max_ips]  # 保留最多 _max_ips 个 IP 地址
 
-    def overwrite_ips(self, new_ips):
+    def _read_ips_from_json(self, field):
         """
-        覆盖写入若干个新的 IP 地址（IP 地址使用分号间隔的字符串，或者列表形式）。
-        :param new_ips: 新的 IP 地址列表或分号间隔的字符串
-        """
-        # 如果输入的是字符串，将其拆分为列表
-        if isinstance(new_ips, str):
-            new_ips = new_ips.split(";")
-
-        # 去重并限制 IP 数量
-        new_ips = self._limit_and_deduplicate_ips(new_ips)
-
-        # 如果文件不存在，提前创建并初始化文件
-        if not os.path.exists(self._settings_file_path):
-            # logger.warning(f"配置文件不存在, 创建新文件并初始化配置: {self._settings_file_path}")
-
-            # 创建一个空的初始配置
-            data = {"ips": new_ips}
-
-            # 写入新配置文件
-            with open(self._settings_file_path, 'w') as f:
-                json.dump(data, f, indent=4)
-
-            self._ips = ";".join(new_ips)  # 更新内部的 IP 地址字符串
-            # logger.info(f"成功创建新的配置文件并写入 IP 地址: {self._ips}")
-            return
-
-        # 如果文件存在，则读取现有数据，保留原有字段
-        try:
-            with open(self._settings_file_path, 'r') as f:
-                data = json.load(f)
-
-            # 更新 ips 字段
-            data["ips"] = new_ips
-
-            # 写回文件
-            with open(self._settings_file_path, 'w') as f:
-                json.dump(data, f, indent=4)
-
-            self._ips = ";".join(new_ips)  # 更新内部的 IP 地址字符串
-        except (json.JSONDecodeError, IOError) as e:
-            pass
-            # logger.error(f"读取或写入配置文件时出错: {e}")
-
-    def add_ips(self, new_ips):
-        """
-        增量添加若干个新的 IP 地址（IP 地址使用分号间隔的字符串，或者列表形式）。
-        :param new_ips: 要添加的 IP 地址列表或分号间隔的字符串
-        """
-        # 如果输入的是字符串，将其拆分为列表
-        if isinstance(new_ips, str):
-            new_ips = new_ips.split(";")
-
-        # 将现有的 IP 地址与新 IP 地址合并，并去重
-        current_ips = self._ips.split(";") if self._ips else []
-        updated_ips = new_ips + current_ips
-
-        # 去重并限制 IP 数量
-        updated_ips = self._limit_and_deduplicate_ips(updated_ips)
-
-        self.overwrite_ips(updated_ips)  # 使用覆盖写入方法更新 IP 地址列表
-        # print(f"成功添加 {len(new_ips)} 个新的 IP 地址")
-
-    def read_url_ips(self):
-        """
-        获取 JSON 文件中 `url_ip` 字段的所有 IP 地址。
-        :return: IP 地址列表（如果字段不存在则返回空列表）
+        从 JSON 文件中读取指定字段的 IP 地址。
+        :param field: 要读取的字段名
+        :return: 字段内容，以分号分隔的字符串
         """
         if not os.path.exists(self._settings_file_path):
-            return []  # 文件不存在，返回空列表
+            return ""  # 文件不存在，返回空字符串
 
         try:
             with open(self._settings_file_path, 'r') as f:
                 data = json.load(f)
-                return data.get("url_ip", [])  # 返回 `url_ip` 字段内容
+                # 获取字段内容并返回分号分隔的字符串
+                return ";".join(data.get(field, []))
         except (json.JSONDecodeError, IOError):
-            return []  # 读取失败，返回空列表
+            return ""  # 读取失败，返回空字符串
 
-    def overwrite_url_ips(self, new_ips):
+    def _overwrite_ips_in_json(self, field, new_ips):
         """
-        覆盖写入 `url_ip` 字段的新 IP 地址列表。
-        :param new_ips: 新的 IP 地址列表或分号间隔的字符串
+        覆盖写入指定字段的 IP 地址。
+        :param field: 要更新的字段名
+        :param new_ips: 新的 IP 地址列表或分号分隔的字符串
         """
         # 如果输入是字符串，将其转换为列表
         if isinstance(new_ips, str):
@@ -566,9 +489,40 @@ class IpLocationParser:
         else:
             data = {}
 
-        # 更新 `url_ip` 字段
-        data["url_ip"] = new_ips
+        # 更新指定字段
+        data[field] = new_ips
 
         # 写入文件
         with open(self._settings_file_path, 'w') as f:
             json.dump(data, f, indent=4)
+
+    def read_ips(self, field):
+        """
+        获取 JSON 文件中指定字段的所有 IP 地址，返回分号分隔的字符串。
+        :param field: 要读取的字段名
+        :return: 字段内容，以分号分隔的字符串
+        """
+        return self._read_ips_from_json(field)
+
+    def overwrite_ips(self, field, new_ips):
+        """
+        覆盖写入指定字段的新 IP 地址。
+        :param field: 要更新的字段名
+        :param new_ips: 新的 IP 地址列表或分号分隔的字符串
+        """
+        self._overwrite_ips_in_json(field, new_ips)
+
+    def add_ips(self, field, new_ips):
+        """
+        增量添加指定字段中的 IP 地址。
+        :param field: 要更新的字段名
+        :param new_ips: 要添加的 IP 地址列表或分号分隔的字符串
+        """
+        # 获取当前的 IP 地址
+        current_ips = self.read_ips(field).split(";") if self.read_ips(field) else []
+
+        # 合并新 IP 地址并去重、限制数量
+        updated_ips = self._limit_and_deduplicate_ips(new_ips.split(";") + current_ips)
+
+        # 写入更新后的 IP 地址
+        self.overwrite_ips(field, updated_ips)
