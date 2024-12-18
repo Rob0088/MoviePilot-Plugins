@@ -741,13 +741,22 @@ class Dydebug(_PluginBase):
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
-                logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
-                ip_parts = self._current_ip_address.split('.')
-                masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
+                masked_ips = [mask_ip(ip) for ip in current_ip_address.split(';')]
+                masked_ip_string = ";".join(masked_ips)
+                logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
                 if self._my_send:
                     self._my_send.send(title="更新可信IP成功",
-                                       content='应用: ' + app_id + ' 输入IP：' + masked_ip,
+                                       content='应用: ' + app_id + ' 输入IP：' + masked_ip_string,
                                        force_send=True, diy_channel="WeChat")
+                    
+    @staticmethod
+    def mask_ip(ip):
+        ip_parts = ip.split('.')
+        if len(ip_parts) == 4:  # 确保是有效的 IPv4 地址
+            # 使用星号替换第二和第三部分
+            masked_ip = f"{ip_parts[0]}.{len(ip_parts[1]) * '*'}.{len(ip_parts[2]) * '*'}.{ip_parts[3]}"
+            return masked_ip
+        return ip  # 如果不是有效的 IP 地址，返回原地址
 
     def __update_config(self):
         """
@@ -758,8 +767,8 @@ class Dydebug(_PluginBase):
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "notification_token": self._notification_token,
-            "current_ip_address": self._current_ip_address,
-            "ip_changed": self._ip_changed,
+            # "current_ip_address": self._current_ip_address,
+            # "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
