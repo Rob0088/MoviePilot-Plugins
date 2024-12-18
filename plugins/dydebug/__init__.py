@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.8"
+    plugin_version = "1.7.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -573,6 +573,7 @@ class Dydebug(_PluginBase):
     # @staticmethod
     def parse_cookie_header(self, cookie_header):
         cookies = []
+        self._is_special_upload = False
         for cookie in cookie_header.split(';'):
             name, value = cookie.strip().split('=', 1)
             if name == '_upload_type' and value == 'A':
@@ -741,14 +742,14 @@ class Dydebug(_PluginBase):
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
-                masked_ips = [mask_ip(ip) for ip in current_ip_address.split(';')]
+                masked_ips = [mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
                 if self._my_send:
                     self._my_send.send(title="更新可信IP成功",
                                        content='应用: ' + app_id + ' 输入IP：' + masked_ip_string,
                                        force_send=True, diy_channel="WeChat")
-                    
+
     @staticmethod
     def mask_ip(ip):
         ip_parts = ip.split('.')
