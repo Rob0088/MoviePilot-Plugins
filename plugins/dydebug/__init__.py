@@ -742,7 +742,7 @@ class Dydebug(_PluginBase):
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
-                masked_ips = [mask_ip(ip) for ip in self._current_ip_address.split(';')]
+                masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
                 if self._my_send:
