@@ -333,12 +333,11 @@ class Dydebug(_PluginBase):
 
         # 如果有 wan2，则处理新增的 IP 地址
         if self.wan2:
-            url_ips = [ip_address] if isinstance(ip_address, str) else ip_address
+            if isinstance(ip_address, str):
+                url_ips = ip_address.split(";")  # 将字符串按分号拆分为多个 IP 地址
+            else:
+                url_ips = ip_address
             saved_ips = self.wan2.read_ips("ips")
-
-            # 如果保存的 IP 地址是字符串，转换成列表
-            if isinstance(saved_ips, str):
-                saved_ips = saved_ips.split(";")
 
             # 检查每个新 IP 是否存在，若不存在则添加并返回 True
             for ip in url_ips:
