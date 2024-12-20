@@ -197,7 +197,7 @@ class MySender:
         elif channel == "PushPlus":
             return self._send_pushplus(title, content, image)
         else:
-            raise ValueError(f"Unknown channel: {channel}")
+            return f"未知的通知方式: {channel}"
 
     @staticmethod
     def _send_wechat(title, content, image, token):
