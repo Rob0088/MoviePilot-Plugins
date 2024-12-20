@@ -134,8 +134,13 @@ class MySender:
         self.channels = [MySender._detect_channel(t) for t in self.tokens]
         self.current_index = 0  # 当前使用的 token 和 channel 的索引
         self.first_text_sent = False  # 是否已发送过纯文本消息
+        self.ip_change = False  # IP变动消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
+        if self.tokens:
+            self.other_channel = [t for t in self.tokens if t != "WeChat"]
+        else:
+            self.other_channel = []
 
     @staticmethod
     def _detect_channel(token):
@@ -244,7 +249,7 @@ class MySender:
         if ',' in token:
             channel, token = token.split(',', 1)
         else:
-            return "可能AnPush 没有配置消息通道ID"
+            return "AnPush可能没有配置消息通道ID"
         url = f"https://api.anpush.com/push/{token}"
         payload = {
             "title": title,
@@ -296,6 +301,7 @@ class MySender:
     def reset_limit(self):
         """解除限制，允许再次发送纯文本消息"""
         self.first_text_sent = False
+
 
 
 class IpLocationParser:
@@ -417,7 +423,7 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def get_ipv4(page, url: str):
+    def get_ipv4(page, url: str) -> str:
         """返回多个中国 IP 地址，逗号分隔"""
         # 导航到目标页面
         page.goto(url)
@@ -436,8 +442,6 @@ class IpLocationParser:
     def _limit_and_deduplicate_ips(self, ips):
         """
         去重并限制 IP 地址数量，最多保存 _max_ips 个 IP 地址。
-        :param ips: IP 地址列表
-        :return: 去重后的 IP 地址列表，最多 _max_ips 个
         """
         # 去重并保留顺序
         unique_ips = list(dict.fromkeys(ips))
@@ -446,8 +450,6 @@ class IpLocationParser:
     def _read_ips_from_json(self, field):
         """
         从 JSON 文件中读取指定字段的 IP 地址。
-        :param field: 要读取的字段名
-        :return: 字段内容，以分号分隔的字符串
         """
         if not os.path.exists(self._settings_file_path):
             return ""  # 文件不存在，返回空字符串
@@ -490,19 +492,15 @@ class IpLocationParser:
         with open(self._settings_file_path, 'w') as f:
             json.dump(data, f, indent=4)
 
-    def read_ips(self, field):
+    def read_ips(self, field) -> str:
         """
         获取 JSON 文件中指定字段的所有 IP 地址，返回分号分隔的字符串。
-        :param field: 要读取的字段名
-        :return: 字段内容，以分号分隔的字符串
         """
         return self._read_ips_from_json(field)
 
     def overwrite_ips(self, field, new_ips):
         """
         覆盖写入指定字段的新 IP 地址。
-        :param field: 要更新的字段名
-        :param new_ips: 新的 IP 地址列表或分号分隔的字符串
         """
         self._overwrite_ips_in_json(field, new_ips)
 
