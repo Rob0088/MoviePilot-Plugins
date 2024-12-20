@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.9"
+    plugin_version = "1.8.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -145,14 +145,13 @@ class Dydebug(_PluginBase):
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
         if "||wan2" in self._input_id_list:  # 多wan口
-            self.wan1 = None
+            # self.wan1 = None
             self.wan2 = IpLocationParser(self._settings_file_path)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
         else:
-            self.wan1 = IpLocationParser(self._settings_file_path)
+            # self.wan1 = IpLocationParser(self._settings_file_path)
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
-            self.wan1.overwrite_ips("ips", self._current_ip_address)   # 默认当前IP就是企业微信IP
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -317,7 +316,7 @@ class Dydebug(_PluginBase):
             logger.info("----------------------本次任务结束----------------------")
         elif self._await_ip:
             # logger.info("cookie已失效。但配置了第三方通知，继续检测公网IP。当IP变动企业微信通知彻底无法使用时通知用户")
-            logger.info("开始检测公网IP,IP变动时发送")
+            logger.info("开始检测公网IP,等待IP变动后发送通知")
             if self.CheckIP(func="public"):
                 for channel in self._my_send.other_channel:
                     result = self._my_send.send(
@@ -895,19 +894,28 @@ class Dydebug(_PluginBase):
                                             'model': 'local_scan',
                                             'label': '本地扫码修改IP',
                                         }
+                                    }
+                                ]
+                            },
+                            *(
+                                [{
+                                    'component': 'VCol',
+                                    'props': {
+                                        'cols': 12,
+                                        'md': 4
                                     },
-                                    *(
-                                        [{
+                                    'content': [
+                                        {
                                             'component': 'VSwitch',
                                             'props': {
                                                 'model': 'await_ip',
                                                 'label': 'IP变动后通知',
                                             }
-                                        }]
-                                        if self._my_send.other_channel else []
-                                    )
-                                ]
-                            }
+                                        }
+                                    ]
+                                }]
+                                if self._my_send.other_channel else []
+                            )
                         ]
                     },
                     {
@@ -986,7 +994,7 @@ class Dydebug(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '建议启用内建或自定义CookieCloud。支持微信、Server酱等第三方通知,具体请查看作者主页'
+                                            'text': '建议启用内建或自定义CookieCloud。支持微信和Server酱等第三方通知。具体请查看作者主页'
                                         }
                                     }
                                 ]
@@ -1006,7 +1014,7 @@ class Dydebug(_PluginBase):
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
-                                            'text': 'Cookie失效时通知用户,用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
+                                            'text': 'Cookie失效时通知用户，用户使用/push_qr让插件推送二维码。使用第三方通知时填写对应Token/API'
                                         }
                                     }
                                 ]
