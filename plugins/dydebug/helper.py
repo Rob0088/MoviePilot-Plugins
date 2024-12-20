@@ -137,10 +137,20 @@ class MySender:
         self.ip_change = False  # IP变动消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
-        if self.tokens:
-            self.other_channel = [t for t in self.channels if t != "WeChat"]
-        else:
-            self.other_channel = []
+        # if self.tokens:
+        #     self.other_channel = [t for t in self.channels if t != "WeChat"]
+        #     self.other_token = [t for t in self.tokens if t != "WeChat"]
+        # else:
+        #     self.other_channel = []
+        #     self.other_token = []
+
+    @property
+    def other_channel(self):
+        """
+        返回非 WeChat 通道及其对应 token 的列表
+        :return: [(channel, token), ...]
+        """
+        return [(channel, token) for channel, token in zip(self.channels, self.tokens) if channel != "WeChat"]
 
     @staticmethod
     def _detect_channel(token):
@@ -156,7 +166,7 @@ class MySender:
         else:
             return "PushPlus"
 
-    def send(self, title, content=None, image=None, force_send=False, diy_channel=None):
+    def send(self, title, content=None, image=None, force_send=False, diy_channel=None, diy_token=None):
         """发送消息"""
         if not self.init_success:
             return
@@ -169,7 +179,7 @@ class MySender:
 
         # 如果指定了自定义通道，直接尝试发送
         if diy_channel:
-            return self._try_send(title, content, image, diy_channel)
+            return self._try_send(title, content, image, diy_channel, token=diy_token)
 
         # 尝试按顺序发送，直到成功或遍历所有通道
         for i in range(len(self.tokens)):
@@ -215,8 +225,11 @@ class MySender:
             return "微信通知发送错误"
         return None
 
-    def _send_serverchan(self, title, content, image):
-        tmp_tokens = self.tokens[self.current_index]
+    def _send_serverchan(self, title, content, image, diy_token=None):
+        if diy_token:
+            tmp_tokens = diy_token
+        else:
+            tmp_tokens = self.tokens[self.current_index]
         if ',' in tmp_tokens:
             before_comma, after_comma = tmp_tokens.split(',', 1)
             if before_comma.startswith('sctp') and image:
