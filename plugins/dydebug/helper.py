@@ -138,7 +138,7 @@ class MySender:
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
         if self.tokens:
-            self.other_channel = [t for t in self.tokens if t != "WeChat"]
+            self.other_channel = [t for t in self.channels if t != "WeChat"]
         else:
             self.other_channel = []
 
