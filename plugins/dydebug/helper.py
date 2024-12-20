@@ -188,19 +188,20 @@ class MySender:
         return f"所有的通知方式都发送失败"
 
     def _try_send(self, title, content, image, channel, token=None, diy_token=None):
+        result = f"_try_send的参数{title}{content}{image}{token}{diy_token}"
         """尝试使用指定通道发送消息"""
-        if channel == "WeChat" and self.post_message_func:
-            return self._send_v2_wechat(title, content, image, token)
-        elif channel == "WeChat":
-            return self._send_wechat(title, content, image, token) + f"尝试微信通知的信息 {title}{content}{image}{token}"
-        elif channel == "ServerChan":
-            return self._send_serverchan(title, content, image, diy_token)
-        elif channel == "AnPush":
-            return self._send_anpush(title, content, image, diy_token)
-        elif channel == "PushPlus":
-            return self._send_pushplus(title, content, image, diy_token)
-        else:
-            return f"未知的通知方式: {channel}"
+        # if channel == "WeChat" and self.post_message_func:
+        #     return self._send_v2_wechat(title, content, image, token)
+        # elif channel == "WeChat":
+        #     return self._send_wechat(title, content, image, token) + f"尝试微信通知的信息 {title}{content}{image}{token}"
+        # elif channel == "ServerChan":
+        #     return self._send_serverchan(title, content, image, diy_token)
+        # elif channel == "AnPush":
+        #     return self._send_anpush(title, content, image, diy_token)
+        # elif channel == "PushPlus":
+        #     return self._send_pushplus(title, content, image, diy_token)
+        # else:
+        #     return f"未知的通知方式: {channel}"
 
     @staticmethod
     def _send_wechat(title, content, image, token):
