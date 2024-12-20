@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.11"
+    plugin_version = "1.7.10"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -62,8 +62,6 @@ class Dydebug(_PluginBase):
     _my_send = None
     # 多wan口支持
     wan2 = None
-    # 单wan
-    wan1 = None
     # 当前检测url
     wan2_url = None
     # IP变动后发送通知开关
@@ -144,12 +142,12 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
+        if not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才允许使用
+            self._await_ip = False
         if "||wan2" in self._input_id_list:  # 多wan口
-            # self.wan1 = None
             self.wan2 = IpLocationParser(self._settings_file_path)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
         else:
-            # self.wan1 = IpLocationParser(self._settings_file_path)
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
         # 停止现有任务
