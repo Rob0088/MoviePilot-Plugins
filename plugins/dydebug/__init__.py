@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.10"
+    plugin_version = "1.7.11"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -788,7 +788,7 @@ class Dydebug(_PluginBase):
             "cron": self._cron,
             "notification_token": self._notification_token,
             # "current_ip_address": self._current_ip_address,
-            # "ip_changed": self._ip_changed,
+            "await_ip": self._await_ip,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
