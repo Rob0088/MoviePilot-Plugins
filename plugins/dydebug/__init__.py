@@ -206,13 +206,13 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-        if self._my_send and not self._await_ip:  # 配置了通知和不启用“IP变动后通知”
-            result = self._my_send.send(
+        if self._my_send and not self._await_ip:  #不启用“IP变动后通知”
+            error = self._my_send.send(
                 title="cookie已失效,请及时更新",
                 content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
                 image=None, force_send=False
             )
-            if result:
+            if error:
                 logger.info(f"cookie失效通知发送失败,原因：{result}")
 
     @eventmanager.register(EventType.PluginAction)
@@ -316,18 +316,18 @@ class Dydebug(_PluginBase):
             # logger.info("cookie已失效。但配置了第三方通知，继续检测公网IP。当IP变动企业微信通知彻底无法使用时通知用户")
             logger.info("开始检测公网IP,等待IP变动后发送通知")
             if self.CheckIP(func="public"):
-                logger.info(f"配置的第三方通知{self._my_send.other_channel}")
+                # logger.info(f"配置的第三方通知{self._my_send.other_channel}")
                 for channel, token in self._my_send.other_channel:
-                    logger.info(f"正常尝试：{channel}")
-                    result = self._my_send.send(
+                    logger.info(f"正常尝试：{channel} {token}")
+                    error = self._my_send.send(
                         title="公网IP与企业微信IP不一致",
                         content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。",
                         image=None, force_send=True, diy_channel=channel, diy_token=token
                     )
-                    if result:
-                        logger.warning(f"通道 {channel} 发送失败，原因：{result}")
+                    if error:
+                        logger.warning(f"通道 {channel} 发送失败，原因：{error}")
                     else:
-                        logger.info(f"通道 {channel} 发送成功")
+                        # logger.info(f"通道 {channel} 发送成功")
                         break  # 发送成功后退出循环
             logger.info("----------------------本次任务结束----------------------")
         else:
@@ -1185,9 +1185,9 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        result = self._my_send.send("企业微信登录二维码", image=image_src)
-                        if result:
-                            logger.info(f"远程推送任务: 二维码发送失败,原因：{result}")
+                        error = self._my_send.send("企业微信登录二维码", image=image_src)
+                        if error:
+                            logger.info(f"远程推送任务: 二维码发送失败,原因：{error}")
                             browser.close()
                             logger.info("----------------------本次任务结束----------------------")
                             return
