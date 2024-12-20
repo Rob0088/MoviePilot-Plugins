@@ -142,7 +142,7 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
-        if not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才允许使用
+        if not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才
             self._await_ip = False
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
@@ -788,7 +788,7 @@ class Dydebug(_PluginBase):
             "cron": self._cron,
             "notification_token": self._notification_token,
             # "current_ip_address": self._current_ip_address,
-            "await_ip": self._await_ip,
+            # "ip_changed": self._ip_changed,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
