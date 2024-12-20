@@ -912,7 +912,7 @@ class Dydebug(_PluginBase):
                                         }
                                     ]
                                 }]
-                                if self._my_send.other_channel else []
+                                if self._my_send and self._my_send.other_channel else []
                             )
                         ]
                     },
