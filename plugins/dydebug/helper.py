@@ -172,14 +172,14 @@ class MySender:
 
         # 如果指定了自定义通道，直接尝试发送
         if diy_channel:
-            return self._try_send(title, content, image, diy_channel, diy_token)
+            return self._try_send(title, content, image, channel=diy_channel, diy_token=diy_token)
 
         # 尝试按顺序发送，直到成功或遍历所有通道
         for _ in range(len(self.tokens)):
             token = self.tokens[self.current_index]
             channel = self.channels[self.current_index]
             try:
-                result = self._try_send(title, content, image, channel, token)
+                result = self._try_send(title, content, image, channel, token=token)
                 if result is None:  # 成功时返回 None
                     return
             except Exception as e:
@@ -247,7 +247,7 @@ class MySender:
         response = requests.post(url, json=params, headers=headers)
         result = response.json()
         if result.get('code') != 0:
-            return f"Server酱通知错误: {result.get('message')}"
+            return f"Server酱通知错误: {result.get('message')} 使用的token是{token}"
         return None
 
     def _send_anpush(self, title, content, image, diy_token=None):
