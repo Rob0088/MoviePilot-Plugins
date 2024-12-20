@@ -192,7 +192,7 @@ class MySender:
         if channel == "WeChat" and self.post_message_func:
             return self._send_v2_wechat(title, content, image, token)
         elif channel == "WeChat":
-            return self._send_wechat(title, content, image, token)
+            return self._send_wechat(title, content, image, token) + f"尝试微信通知的信息 {title}{content}{image}{token}"
         elif channel == "ServerChan":
             return self._send_serverchan(title, content, image, diy_token)
         elif channel == "AnPush":
@@ -247,7 +247,7 @@ class MySender:
         response = requests.post(url, json=params, headers=headers)
         result = response.json()
         if result.get('code') != 0:
-            return f"Server酱通知错误: {result.get('message')} 使用的token是{token}"
+            return f"Server酱通知错误: {result.get('message')}"
         return None
 
     def _send_anpush(self, title, content, image, diy_token=None):
