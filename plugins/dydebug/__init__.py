@@ -62,8 +62,12 @@ class Dydebug(_PluginBase):
     _my_send = None
     # 多wan口支持
     wan2 = None
+    # 单wan
+    wan1 = None
     # 当前检测url
     wan2_url = None
+    # IP变动后发送通知开关
+    _await_ip = False
     # 保存cookie
     _saved_cookie = None
     # 通知方式token/api
@@ -99,8 +103,9 @@ class Dydebug(_PluginBase):
     _use_cookiecloud = True
     # 登录cookie
     _cookie_header = ""
+    # 内建CookieCloud服务器
     _server = f'http://localhost:{settings.NGINX_PORT}/cookiecloud'
-
+    # CookieCloud客户端
     _cookiecloud = CookieCloudHelper()
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -132,7 +137,7 @@ class Dydebug(_PluginBase):
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
             self._cookie_header = config.get("cookie_header")
-            # self._ip_changed = config.get("ip_changed")
+            self._await_ip = config.get("await_ip")
         if self.version != "v1":
             self._my_send = MySender(self._notification_token, func=self.post_message)
         else:
@@ -140,11 +145,14 @@ class Dydebug(_PluginBase):
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
         if "||wan2" in self._input_id_list:  # 多wan口
+            self.wan1 = None
             self.wan2 = IpLocationParser(self._settings_file_path)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
         else:
+            self.wan1 = IpLocationParser(self._settings_file_path)
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
+            self.wan1.overwrite_ips("ips", self._current_ip_address)   # 默认当前IP就是企业微信IP
         # 停止现有任务
         self.stop_service()
         if (self._enabled or self._onlyonce) and self._input_id_list:
@@ -201,7 +209,7 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-        if self._my_send:
+        if self._my_send and not self._await_ip:
             result = self._my_send.send(
                 title="cookie已失效,请及时更新",
                 content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
@@ -307,10 +315,25 @@ class Dydebug(_PluginBase):
                 self.ChangeIP()
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
+        elif self._await_ip:
+            # logger.info("cookie已失效。但配置了第三方通知，继续检测公网IP。当IP变动企业微信通知彻底无法使用时通知用户")
+            logger.info("开始检测公网IP,IP变动时发送")
+            if self.CheckIP(func="public"):
+                for channel in self._my_send.other_channel:
+                    result = self._my_send.send(
+                        title="公网IP与企业微信IP不一致",
+                        content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。",
+                        image=None, force_send=True, diy_channel=channel
+                    )
+                    if result:
+                        logger.warning(f"通道 {channel} 发送失败，原因：{result}")
+                    else:
+                        break  # 发送成功后退出循环
+            logger.info("----------------------本次任务结束----------------------")
         else:
             logger.warning("cookie已失效请及时更新,本次不检查公网IP")
 
-    def CheckIP(self):
+    def CheckIP(self, func=None):
         if self.wan2:
             ip_address = self.wan2.read_ips("url_ip")
             url = self.wan2_url
@@ -326,9 +349,8 @@ class Dydebug(_PluginBase):
             logger.info(f"IP获取成功: {url}: {ip_address}")
 
         # 上次修改 IP 失败时，继续尝试修改
-        if not self._ip_changed:
+        if not self._ip_changed and func != "public":  # 排除cookie失效 检测公网变动的任务
             logger.info("上次IP修改IP失败 继续尝试修改IP")
-            self._current_ip_address = ip_address
             return True
 
         # 如果有 wan2，则处理新增的 IP 地址
@@ -348,7 +370,6 @@ class Dydebug(_PluginBase):
             # 检查 IP 是否变化
             if ip_address != self._current_ip_address:
                 logger.info("检测到IP变化")
-                self._current_ip_address = ip_address
                 return True
         return False
 
@@ -391,6 +412,7 @@ class Dydebug(_PluginBase):
                     if response.status_code == 200:
                         ip_address = re.search(self._ip_pattern, response.text)
                         if ip_address:
+                            # self.wan1.overwrite_ips("url_ip", ip_address.group())
                             return url, ip_address.group()  # 返回匹配的 IP 地址
                 except Exception as e:
                     if "104" not in str(e) and 'Read timed out' not in str(e):  # 忽略网络波动,都失败会返回None, "获取IP失败"
@@ -691,6 +713,7 @@ class Dydebug(_PluginBase):
 
     def click_app_management_buttons(self, page):
         self._cookie_valid = True
+        self._my_send.reset_limit()  # 解除限制 可以发送cookie失效提醒
         bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
         # 按钮的选择器和名称
         buttons = [
@@ -872,7 +895,17 @@ class Dydebug(_PluginBase):
                                             'model': 'local_scan',
                                             'label': '本地扫码修改IP',
                                         }
-                                    }
+                                    },
+                                    *(
+                                        [{
+                                            'component': 'VSwitch',
+                                            'props': {
+                                                'model': 'await_ip',
+                                                'label': 'IP变动后通知',
+                                            }
+                                        }]
+                                        if self._my_send.other_channel else []
+                                    )
                                 ]
                             }
                         ]
@@ -989,6 +1022,7 @@ class Dydebug(_PluginBase):
             "forceUpdate": False,
             "use_cookiecloud": True,
             "use_local_qr": False,
+            "await_ip": False,
             "cookie_header": "",
             "notification_token": "",
             "input_id_list": ""
