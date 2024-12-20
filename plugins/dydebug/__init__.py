@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.11"
+    plugin_version = "1.7.12"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -142,7 +142,7 @@ class Dydebug(_PluginBase):
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
-        if self._my_send and not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才
+        if self._my_send and not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才可以使用
             self._await_ip = False
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
@@ -788,7 +788,7 @@ class Dydebug(_PluginBase):
             "cron": self._cron,
             "notification_token": self._notification_token,
             # "current_ip_address": self._current_ip_address,
-            # "ip_changed": self._ip_changed,
+            "await_ip": self._await_ip,
             "forced_update": self._forced_update,
             "local_scan": self._local_scan,
             "input_id_list": self._input_id_list,
