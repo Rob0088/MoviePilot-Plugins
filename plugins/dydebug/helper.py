@@ -134,15 +134,8 @@ class MySender:
         self.channels = [MySender._detect_channel(t) for t in self.tokens]
         self.current_index = 0  # 当前使用的 token 和 channel 的索引
         self.first_text_sent = False  # 是否已发送过纯文本消息
-        self.ip_change = False  # IP变动消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
-        # if self.tokens:
-        #     self.other_channel = [t for t in self.channels if t != "WeChat"]
-        #     self.other_token = [t for t in self.tokens if t != "WeChat"]
-        # else:
-        #     self.other_channel = []
-        #     self.other_token = []
 
     @property
     def other_channel(self):
@@ -179,10 +172,10 @@ class MySender:
 
         # 如果指定了自定义通道，直接尝试发送
         if diy_channel:
-            return self._try_send(title, content, image, diy_channel, token=diy_token)
+            return self._try_send(title, content, image, diy_channel, diy_token)
 
         # 尝试按顺序发送，直到成功或遍历所有通道
-        for i in range(len(self.tokens)):
+        for _ in range(len(self.tokens)):
             token = self.tokens[self.current_index]
             channel = self.channels[self.current_index]
             try:
@@ -194,18 +187,18 @@ class MySender:
             self.current_index = (self.current_index + 1) % len(self.tokens)
         return f"所有的通知方式都发送失败"
 
-    def _try_send(self, title, content, image, channel, token=None):
+    def _try_send(self, title, content, image, channel, token=None, diy_token=None):
         """尝试使用指定通道发送消息"""
         if channel == "WeChat" and self.post_message_func:
             return self._send_v2_wechat(title, content, image, token)
         elif channel == "WeChat":
             return self._send_wechat(title, content, image, token)
         elif channel == "ServerChan":
-            return self._send_serverchan(title, content, image)
+            return self._send_serverchan(title, content, image, diy_token)
         elif channel == "AnPush":
-            return self._send_anpush(title, content, image)
+            return self._send_anpush(title, content, image, diy_token)
         elif channel == "PushPlus":
-            return self._send_pushplus(title, content, image)
+            return self._send_pushplus(title, content, image, diy_token)
         else:
             return f"未知的通知方式: {channel}"
 
@@ -257,8 +250,11 @@ class MySender:
             return f"Server酱通知错误: {result.get('message')}"
         return None
 
-    def _send_anpush(self, title, content, image):
-        token = self.tokens[self.current_index]  # 获取当前通道对应的 token
+    def _send_anpush(self, title, content, image, diy_token=None):
+        if diy_token:
+            token = diy_token
+        else:
+            token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         if ',' in token:
             channel, token = token.split(',', 1)
         else:
@@ -279,8 +275,11 @@ class MySender:
             return "AnPush 消息通道未找到"
         return None
 
-    def _send_pushplus(self, title, content, image):
-        token = self.tokens[self.current_index]  # 获取当前通道对应的 token
+    def _send_pushplus(self, title, content, image, diy_token=None):
+        if diy_token:
+            token = diy_token
+        else:
+            token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         pushplus_url = f"http://www.pushplus.plus/send/{token}"
         # PushPlus发送逻辑
         data = {
@@ -314,7 +313,6 @@ class MySender:
     def reset_limit(self):
         """解除限制，允许再次发送纯文本消息"""
         self.first_text_sent = False
-
 
 
 class IpLocationParser:
