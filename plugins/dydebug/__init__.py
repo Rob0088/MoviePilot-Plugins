@@ -776,7 +776,7 @@ class Dydebug(_PluginBase):
                 self._send_notification = False
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
-                logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
+                logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
                 if self._my_send:
                     self._my_send.send(title="更新可信IP成功",
                                        content='应用: ' + app_id + ' 输入IP：' + masked_ip_string,
@@ -1270,7 +1270,7 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            logger.info(f"服务启动,IP检查间隔{self._cron}，Cookie检查间隔20分钟")
+            # logger.info(f"服务启动,IP检查间隔{self._cron}")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
