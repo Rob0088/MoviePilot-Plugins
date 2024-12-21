@@ -72,6 +72,8 @@ class Dydebug(_PluginBase):
     _notification_token = ''
     # 标记企业微信通知可用
     _wechat_available = True
+    # 标记IP变动后 是否发送通知
+    _send_notification = False
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -208,7 +210,7 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-        if self._my_send and not self._await_ip:  #不启用“IP变动后通知”
+        if self._my_send and not self._await_ip:  # 不启用“IP变动后通知”
             error = self._my_send.send(
                 title="cookie已失效,请及时更新",
                 content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
@@ -314,7 +316,7 @@ class Dydebug(_PluginBase):
                 self.ChangeIP()
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
-        elif self._await_ip:
+        elif self._await_ip and not self._send_notification:
             # logger.info("cookie已失效。但配置了第三方通知，继续检测公网IP。当IP变动企业微信通知彻底无法使用时通知用户")
             logger.info("开始检测公网IP,等待IP变动后发送通知")
             if self.CheckIP(func="public"):
@@ -327,14 +329,17 @@ class Dydebug(_PluginBase):
                         image=None, force_send=False, diy_channel=channel, diy_token=token
                     )
                     if error:
-                        logger.warning(f"通道 {channel} 发送失败，原因：{error}")
+                        logger.error(f"通道 {channel} 发送失败，原因：{error}")
                     else:
-                        # logger.info(f"通道 {channel} 发送成功")
+                        self._send_notification = True
                         break  # 发送成功后退出循环
                 self._wechat_available = False  # 标记不可用
             logger.info("----------------------本次任务结束----------------------")
         else:
-            logger.warning("cookie已失效请及时更新,本次不检查公网IP")
+            if self._send_notification:
+                logger.info("企业微信可信IP和公网IP不一致，微信通知可能已经无法使用。第三方通知已经发送。")
+            else:
+                logger.info("cookie已失效请及时更新,本次不检查公网IP")
 
     def CheckIP(self, func=None):
         if self.wan2:
@@ -422,7 +427,7 @@ class Dydebug(_PluginBase):
                         logger.warning(f"{url} 获取IP失败, Error: {e}")
             return None, "获取IP失败"
         else:
-            urls = ["http://revproxy.ustc.edu.cn:8000", "https://ip.skk.moe/multi", "https://ip.orz.tools"]
+            urls = ["https://ip.skk.moe/multi", "https://ip.orz.tools"]
             random.shuffle(urls)
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
@@ -768,6 +773,7 @@ class Dydebug(_PluginBase):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
                 self._wechat_available = True
+                self._send_notification = False
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
@@ -1189,7 +1195,7 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        if not self._wechat_available:
+                        if not self._wechat_available and self._my_send.other_channel:     # 微信通知已经无法使用
                             for channel, token in self._my_send.other_channel:
                                 # logger.info(f"正常尝试：{channel} {token}")
                                 error = self._my_send.send(
