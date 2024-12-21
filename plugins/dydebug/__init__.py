@@ -160,12 +160,15 @@ class Dydebug(_PluginBase):
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
             # 运行一次定时服务
-            if self._onlyonce:
-                if not self._forced_update or not self._local_scan:
-                    # logger.info("立即检测公网IP")
-                    self._scheduler.add_job(func=self.check, trigger='date',
-                                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                            name="检测公网IP")  # 添加任务
+            if self._onlyonce:  # 多网口ip检测禁用立即检测
+                if not self.wan2:
+                    if not self._forced_update or not self._local_scan:
+                        # logger.info("立即检测公网IP")
+                        self._scheduler.add_job(func=self.check, trigger='date',
+                                                run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                                name="检测公网IP")  # 添加任务
+                else:
+                    logger.info("启用多网口时禁用‘立即检测一次’功能")
                 # 关闭一次性开关
                 self._onlyonce = False
 
@@ -567,9 +570,11 @@ class Dydebug(_PluginBase):
                 if current_cookies is None:
                     self._send_cookie_false()
                     logger.error("更新本地 Cookie失败")
+                    self._is_special_upload = False
                     return
                 else:
                     logger.info("更新本地 Cookie成功")
+                    self._is_special_upload = True
                     self._saved_cookie = current_cookies  # 保存
                     self._cookie_valid = True
             except Exception as e:
@@ -772,8 +777,8 @@ class Dydebug(_PluginBase):
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
-                self._wechat_available = True
-                self._send_notification = False
+                self._wechat_available = True    # 标记微信通知重新有效
+                self._send_notification = False  # 重置第三方通知已发送标记
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
@@ -1270,7 +1275,7 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            # logger.info(f"服务启动,IP检查间隔{self._cron}")
+            logger.info(f"服务启动")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
