@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.7.17"
+    plugin_version = "1.8.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -70,6 +70,8 @@ class Dydebug(_PluginBase):
     _saved_cookie = None
     # 通知方式token/api
     _notification_token = ''
+    # 标记企业微信通知可用
+    _wechat_available = True
 
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
@@ -329,6 +331,7 @@ class Dydebug(_PluginBase):
                     else:
                         # logger.info(f"通道 {channel} 发送成功")
                         break  # 发送成功后退出循环
+                self._wechat_available = False  # 标记不可用
             logger.info("----------------------本次任务结束----------------------")
         else:
             logger.warning("cookie已失效请及时更新,本次不检查公网IP")
@@ -764,6 +767,7 @@ class Dydebug(_PluginBase):
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
             if self._ip_changed:
+                self._wechat_available = True
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + masked_ip_string)
@@ -1185,12 +1189,24 @@ class Dydebug(_PluginBase):
                 image_src, refuse_time = self.find_qrc(page)
                 if image_src:
                     if self._my_send:
-                        error = self._my_send.send("企业微信登录二维码", image=image_src)
-                        if error:
-                            logger.info(f"远程推送任务: 二维码发送失败,原因：{error}")
-                            browser.close()
-                            logger.info("----------------------本次任务结束----------------------")
-                            return
+                        if not self._wechat_available:
+                            for channel, token in self._my_send.other_channel:
+                                # logger.info(f"正常尝试：{channel} {token}")
+                                error = self._my_send.send(
+                                    title="企业微信登录二维码",
+                                    image=image_src, diy_channel=channel, diy_token=token
+                                )
+                                if error:
+                                    logger.warning(f"通道 {channel} 推送二维码失败，原因：{error}")
+                                else:
+                                    break  # 发送成功后退出循环
+                        else:
+                            error = self._my_send.send("企业微信登录二维码", image=image_src)
+                            if error:
+                                logger.info(f"远程推送任务: 二维码发送失败,原因：{error}")
+                                browser.close()
+                                logger.info("----------------------本次任务结束----------------------")
+                                return
                         logger.info("远程推送任务: 二维码发送成功,等待用户 90 秒内扫码登录。V2'微信通知'的用户,此消息并不准确")
                         # logger.info("远程推送任务: 如收到短信验证码请以？结束,发送到<企业微信应用> 如： 110301？")
                         time.sleep(90)
@@ -1248,7 +1264,7 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            # logger.info(f"{self.plugin_name}定时服务启动,时间间隔 {self._cron} ")
+            logger.info(f"服务启动,IP检查间隔{self._cron}，Cookie检查间隔20分钟")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
