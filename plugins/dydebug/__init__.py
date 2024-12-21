@@ -318,11 +318,11 @@ class Dydebug(_PluginBase):
             if self.CheckIP(func="public"):
                 # logger.info(f"配置的第三方通知{self._my_send.other_channel}")
                 for channel, token in self._my_send.other_channel:
-                    logger.info(f"正常尝试：{channel} {token}")
+                    # logger.info(f"正常尝试：{channel} {token}")
                     error = self._my_send.send(
                         title="公网IP与企业微信IP不一致",
                         content="请在企业微信应用发送/push_qr, 如有验证码以'？'结束发送到企业微信应用。",
-                        image=None, force_send=True, diy_channel=channel, diy_token=token
+                        image=None, force_send=False, diy_channel=channel, diy_token=token
                     )
                     if error:
                         logger.warning(f"通道 {channel} 发送失败，原因：{error}")
