@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.5"
+    plugin_version = "1.8.6"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1322,8 +1322,8 @@ class Dydebug(_PluginBase):
             if not self.wan2:
                 logger.info(f"服务启动")
             else:
-                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空")
-                logger.info(f"最大保存{self.wan2.max_ips}个IP，首次检测IP可能失败")
+                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空，导致检测IP失败")
+                # logger.info(f"最大保存{self.wan2.max_ips}个IP，首次检测IP可能失败")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
