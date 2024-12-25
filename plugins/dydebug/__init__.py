@@ -1321,9 +1321,10 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            logger.info(f"服务启动")
             if self.wan2:
                 logger.info("多网口检测第一次获取IP可能会失败")
+            else:
+                logger.info(f"服务启动")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
