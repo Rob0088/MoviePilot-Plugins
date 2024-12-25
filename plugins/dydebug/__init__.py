@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.4"
+    plugin_version = "1.8.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -151,7 +151,6 @@ class Dydebug(_PluginBase):
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
-            logger.info(f"当前记录的IP：{self._current_ip_address}，如为空或不一致，预计检测1-2轮内会修正")
         else:
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
@@ -164,14 +163,15 @@ class Dydebug(_PluginBase):
             if self._onlyonce:  # 多网口ip检测禁用立即检测
                 if self.wan2:
                     if not self._forced_update or not self._local_scan:
+                        logger.info("多网络出口检查需要时间较长，预计25秒内完成")
                         self._scheduler.add_job(func=self.write_wan2_ip, trigger='date',
                                                 run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
                                                     seconds=3),
-                                                name="多网口获取IP")  # 添加任务
+                                                name="多网络出口获取IP")  # 添加任务
                         self._scheduler.add_job(func=self.check, trigger='date',
                                                 run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
                                                     seconds=20),
-                                                name="多网口检查IP")  # 添加任务
+                                                name="多网络出口检查IP")  # 添加任务
 
                 else:
                     if not self._forced_update or not self._local_scan:
@@ -321,7 +321,6 @@ class Dydebug(_PluginBase):
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
-        self.wan2_url = None
         # 创建一个 Playwright 实例
         with sync_playwright() as p:
             browser = None  # 定义浏览器变量
@@ -335,9 +334,8 @@ class Dydebug(_PluginBase):
                     page = browser.new_page()
                     china_ips = self.wan2.get_ipv4(page, url)
                     if china_ips:
-                        self.wan2_url = url
                         self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
-                        logger.info(f"多网口公网IP获取成功，写入文件：{self.wan2_url}")
+                        # logger.info(f"多网口公网IP获取成功，写入文件：{self.wan2_url}")
                         break
                 except Exception as e:
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
@@ -1321,10 +1319,11 @@ class Dydebug(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            if self.wan2:
-                logger.info("多网口检测第一次获取IP可能会失败")
-            else:
+            if not self.wan2:
                 logger.info(f"服务启动")
+            else:
+                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空")
+                logger.info(f"最大保存{self.wan2.max_ips}个IP，首次检测IP可能失败")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
