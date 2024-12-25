@@ -316,7 +316,7 @@ class MySender:
 
 
 class IpLocationParser:
-    def __init__(self, settings_file_path, max_ips=4):
+    def __init__(self, settings_file_path, max_ips=3):
         self._settings_file_path = settings_file_path
         self._max_ips = max_ips  # 最大历史IP数量
         self._ips = self.read_ips("ips")  # 初始化时读取已存储的 IP 地址
