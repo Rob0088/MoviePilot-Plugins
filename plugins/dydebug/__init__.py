@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.7"
+    plugin_version = "1.8.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -321,6 +321,7 @@ class Dydebug(_PluginBase):
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
+        self.wan2_url = None
         # 创建一个 Playwright 实例
         with sync_playwright() as p:
             browser = None  # 定义浏览器变量
@@ -335,7 +336,7 @@ class Dydebug(_PluginBase):
                     china_ips = self.wan2.get_ipv4(page, url)
                     if china_ips:
                         self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
-                        # logger.info(f"多网口公网IP获取成功，写入文件：{self.wan2_url}")
+                        self.wan2_url = url
                         break
                 except Exception as e:
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
@@ -476,6 +477,7 @@ class Dydebug(_PluginBase):
         else:
             urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
             random.shuffle(urls)
+            self.wan2_url = None
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
                 browser = None  # 定义浏览器变量
@@ -1321,9 +1323,9 @@ class Dydebug(_PluginBase):
         if self._enabled and self._cron:
             if not self.wan2:
                 logger.info(f"服务启动")
-            # else:
-            #     logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空，导致检测IP失败")
-                # logger.info(f"最大保存{self.wan2.max_ips}个IP，首次检测IP可能失败")
+            else:
+                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空导致检测IP失败")
+                # logger.info(f"最大保存{self.wan2._max_ip}个IP，首次检测IP可能失败")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
