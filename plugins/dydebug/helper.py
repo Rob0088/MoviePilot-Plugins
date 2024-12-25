@@ -327,7 +327,7 @@ class IpLocationParser:
         parser_methods = {
             "https://ip.orz.tools": IpLocationParser._parse_ip_orz_tools,
             "https://ip.skk.moe/multi": IpLocationParser._parse_ip_skk_moe,
-            "http://revproxy.ustc.edu.cn:8000": IpLocationParser._parse_ip_ustc,
+            "https://ip.m27.tech": IpLocationParser._parse_ip_m27,
         }
         parser_method = parser_methods.get(url)
         if parser_method is None:
@@ -405,25 +405,25 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def _parse_ip_ustc(page):
+    def _parse_ip_m27(page):
+        """解析 https://ip.m27.tech 页面中的 IP 和归属地"""
         rows = page.query_selector_all(
-            'body > div:nth-child(4) > center > table > tbody > tr > td:nth-child(2)'
+            'body > div > div.panel.panel-success > div.panel-body > table > tbody > tr'
         )
-        # print(f"ip_ustc共找到 {len(rows)} 行数据")
+        # print(f"共找到 {len(rows)} 行数据")
         ipv4_addresses, locations = [], []
 
         for row in rows:
             row_text = row.inner_text().strip()
-
             # 提取 IP 地址
-            ip_match = re.match(r'(\d+\.\d+\.\d+\.\d+)', row_text)
+            ip_match = re.search(r'(\d+\.\d+\.\d+\.\d+)', row_text)
             if ip_match:
                 ip = ip_match.group(1).strip()
                 if not IpLocationParser._is_valid_ipv4(ip):
                     continue
             else:
                 continue
-
+        #
             # 提取归属地
             location_match = re.search(r'(China|中国).*', row_text)
             location = location_match.group(0).strip() if location_match else "未知"
@@ -439,7 +439,7 @@ class IpLocationParser:
         # 导航到目标页面
         page.goto(url)
         # 等待一段时间，让所有动态渲染的内容加载完成
-        page.wait_for_timeout(5000)  # 等待 5 秒钟，确保动态渲染完成
+        page.wait_for_timeout(10000)  # 等待 10 秒钟
         # 调用解析器解析数据
         ipv4_addresses, locations = IpLocationParser._parse(page, url)
         # 筛选出属于中国的 IP 地址
