@@ -1324,7 +1324,7 @@ class Dydebug(_PluginBase):
             if not self.wan2:
                 logger.info(f"服务启动")
             else:
-                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空导致检测IP失败")
+                logger.info(f"当前记录的IP：{self._current_ip_address}，首次运行可能为空或检测IP失败")
                 # logger.info(f"最大保存{self.wan2._max_ip}个IP，首次检测IP可能失败")
             return [{
                 "id": self.__class__.__name__,
