@@ -151,6 +151,7 @@ class Dydebug(_PluginBase):
         if "||wan2" in self._input_id_list:  # 多wan口
             self.wan2 = IpLocationParser(self._settings_file_path)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
+            logger.info(f"当前记录的IP：{self._current_ip_address}，如为空或不一致，预计检测1-2轮内会修正")
         else:
             self.wan2 = None
             _, self._current_ip_address = self.get_ip_from_url()  # 直接从网页获取
@@ -168,7 +169,7 @@ class Dydebug(_PluginBase):
                                                 run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                                 name="检测公网IP")  # 添加任务
                 else:
-                    logger.info("启用多网口时禁用‘立即检测一次’功能")
+                    logger.info("启用多网口检测时禁用‘立即检测一次’功能")
                 # 关闭一次性开关
                 self._onlyonce = False
 
@@ -220,7 +221,7 @@ class Dydebug(_PluginBase):
                 image=None, force_send=False
             )
             if error:
-                logger.info(f"cookie失效通知发送失败,原因：{result}")
+                logger.info(f"cookie失效通知发送失败,原因：{error}")
 
     @eventmanager.register(EventType.PluginAction)
     def forced_change(self, event: Event = None):
@@ -423,14 +424,13 @@ class Dydebug(_PluginBase):
                     if response.status_code == 200:
                         ip_address = re.search(self._ip_pattern, response.text)
                         if ip_address:
-                            # self.wan1.overwrite_ips("url_ip", ip_address.group())
                             return url, ip_address.group()  # 返回匹配的 IP 地址
                 except Exception as e:
                     if "104" not in str(e) and 'Read timed out' not in str(e):  # 忽略网络波动,都失败会返回None, "获取IP失败"
                         logger.warning(f"{url} 获取IP失败, Error: {e}")
             return None, "获取IP失败"
         else:
-            urls = ["https://ip.skk.moe/multi", "https://ip.orz.tools"]
+            urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
             random.shuffle(urls)
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
@@ -706,11 +706,11 @@ class Dydebug(_PluginBase):
                         time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
                     confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
                     confirm_button.click()  # 点击确认
-                    self._verification_code = None
                     time.sleep(3)  # 等待处理
                     # 等待登录成功的元素出现
                     success_element = page.wait_for_selector('#check_corp_info', timeout=5000)
                     if success_element:
+                        self._verification_code = None
                         logger.info("验证码登录成功！")
                         return True
                 else:
@@ -1211,7 +1211,7 @@ class Dydebug(_PluginBase):
                                     logger.warning(f"通道 {channel} 推送二维码失败，原因：{error}")
                                 else:
                                     break  # 发送成功后退出循环
-                        else:
+                        else:  # 硬发
                             error = self._my_send.send("企业微信登录二维码", image=image_src)
                             if error:
                                 logger.info(f"远程推送任务: 二维码发送失败,原因：{error}")
@@ -1277,7 +1277,7 @@ class Dydebug(_PluginBase):
         if self._enabled and self._cron:
             logger.info(f"服务启动")
             if self.wan2:
-                logger.info("多网口检测第一次获取IP可能会失败") 
+                logger.info("多网口检测第一次获取IP可能会失败")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
