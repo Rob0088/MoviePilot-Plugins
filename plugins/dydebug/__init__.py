@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.3"
+    plugin_version = "1.8.4"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -170,7 +170,7 @@ class Dydebug(_PluginBase):
                                                 name="多网口获取IP")  # 添加任务
                         self._scheduler.add_job(func=self.check, trigger='date',
                                                 run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
-                                                    seconds=13),
+                                                    seconds=20),
                                                 name="多网口检查IP")  # 添加任务
 
                 else:
