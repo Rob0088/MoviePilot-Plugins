@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.8"
+    plugin_version = "1.8.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -337,6 +337,8 @@ class Dydebug(_PluginBase):
                     if china_ips:
                         self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
                         self.wan2_url = url
+                        # logger.info(f"立即检测任务{url} 多出口IP获取成功")
+                        logger.info(f"立即检测任务{url} 多出口IP：{china_ips}")
                         break
                 except Exception as e:
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
@@ -394,6 +396,7 @@ class Dydebug(_PluginBase):
         if self.wan2:
             ip_address = self.wan2.read_ips("url_ip")
             url = self.wan2_url
+            logger.info(f"check任务：多出口IP: {url} {ip_address}")
         else:
             url, ip_address = self.get_ip_from_url()
 
@@ -493,6 +496,7 @@ class Dydebug(_PluginBase):
                         if china_ips:
                             self.wan2_url = url
                             self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
+                            logger.info(f"get_ip_from_url: {url}{china_ips}")
                             return url, china_ips  # 成功获取到IP后返回
                     except Exception as e:
                         logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
