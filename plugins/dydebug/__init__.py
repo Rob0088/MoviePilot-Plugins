@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.10"
+    plugin_version = "1.8.11"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -242,7 +242,7 @@ class Dydebug(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "dydebug":
                 return
         # 先尝试cookie登陆
         try:
@@ -276,7 +276,7 @@ class Dydebug(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "dydebug":
                 return
         try:
             with sync_playwright() as p:
@@ -317,7 +317,7 @@ class Dydebug(_PluginBase):
 
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "dydebug":
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
@@ -356,7 +356,7 @@ class Dydebug(_PluginBase):
 
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "dydebug":
                 return
 
         if self._cookie_valid:
