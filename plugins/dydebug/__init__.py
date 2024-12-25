@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.9"
+    plugin_version = "1.8.10"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -480,7 +480,6 @@ class Dydebug(_PluginBase):
         else:
             urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
             random.shuffle(urls)
-            self.wan2_url = None
             # 创建一个 Playwright 实例
             with sync_playwright() as p:
                 browser = None  # 定义浏览器变量
@@ -504,6 +503,7 @@ class Dydebug(_PluginBase):
                         if browser:
                             browser.close()
                         browser = None  # 重置浏览器变量
+            self.wan2_url = None
             return None, "获取IP失败"
 
     def find_qrc(self, page):
