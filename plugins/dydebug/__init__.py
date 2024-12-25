@@ -337,6 +337,8 @@ class Dydebug(_PluginBase):
                     if china_ips:
                         self.wan2_url = url
                         self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
+                        logger.info(f"多网口公网IP获取成功，写入文件：{self.wan2_url}")
+                        break
                 except Exception as e:
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
                 finally:
