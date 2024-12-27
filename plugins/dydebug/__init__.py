@@ -310,15 +310,15 @@ class Dydebug(_PluginBase):
             logger.error(f"本地扫码任务: 本地扫码失败: {e}")
 
     # @eventmanager.register(EventType.PluginAction)
-    def write_wan2_ip(self, event: Event = None):
-        if not self._enabled:
-            logger.error("插件未开启")
-            return
+    def write_wan2_ip(self):
+        # if not self._enabled:
+        #     logger.error("插件未开启")
+        #     return
 
-        if event:
-            event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
-                return
+        # if event:
+        #     event_data = event.event_data
+        #     if not event_data or event_data.get("action") != "dydebug":
+        #         return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
         self.wan2_url = None
