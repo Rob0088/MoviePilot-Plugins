@@ -311,7 +311,6 @@ class Dydebug(_PluginBase):
 
     # @eventmanager.register(EventType.PluginAction)
     def write_wan2_ip(self, event: Event = None):
-        logger.error("进入write_wan2_ip函数")
         if not self._enabled:
             logger.error("插件未开启")
             return
@@ -319,7 +318,6 @@ class Dydebug(_PluginBase):
         if event:
             event_data = event.event_data
             if not event_data or event_data.get("action") != "dydebug":
-                logger.error("进入envent")
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
@@ -345,7 +343,6 @@ class Dydebug(_PluginBase):
                 finally:
                     if browser:
                         browser.close()
-                    logger.error("进入finally")
                     browser = None  # 重置浏览器变量
     
     @eventmanager.register(EventType.PluginAction)
