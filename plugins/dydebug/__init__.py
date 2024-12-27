@@ -266,18 +266,18 @@ class Dydebug(_PluginBase):
 
         logger.info("----------------------本次任务结束----------------------")
 
-    @eventmanager.register(EventType.PluginAction)
-    def local_scanning(self, event: Event = None):
+    # @eventmanager.register(EventType.PluginAction)
+    def local_scanning(self):
         """
         本地扫码
         """
-        if not self._enabled:
-            logger.error("插件未开启")
-            return
-        if event:
-            event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
-                return
+        # if not self._enabled:
+        #     logger.error("插件未开启")
+        #     return
+        # if event:
+        #     event_data = event.event_data
+        #     if not event_data or event_data.get("action") != "dydebug":
+        #         return
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, args=['--lang=zh-CN'])
