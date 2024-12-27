@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.11"
+    plugin_version = "1.8.12"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -772,7 +772,8 @@ class Dydebug(_PluginBase):
 
     def click_app_management_buttons(self, page):
         self._cookie_valid = True
-        self._my_send.reset_limit()  # 解除限制 可以发送cookie失效提醒
+        if self._my_send:
+            self._my_send.reset_limit()  # 解除限制 可以发送cookie失效提醒
         bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
         # 按钮的选择器和名称
         buttons = [
