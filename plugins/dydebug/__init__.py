@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.12"
+    plugin_version = "1.8.13"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -148,8 +148,13 @@ class Dydebug(_PluginBase):
             self._my_send = None
         if self._my_send and not self._my_send.other_channel:   # 确保跟随通知配置，一定要配置了第三方才可以使用
             self._await_ip = False
-        if "||wan2" in self._input_id_list:  # 多wan口
-            self.wan2 = IpLocationParser(self._settings_file_path)
+        if "||wan" in self._input_id_list:  # 多wan口
+            last_char = self._input_id_list[-1] if self._input_id_list else None
+            if isinstance(last_char, str) and last_char.isdigit():
+                max_ips = int(last_char)
+            else:
+                max_ips = 3  # 默认为 3
+            self.wan2 = IpLocationParser(self._settings_file_path, max_ips=max_ips)
             self._current_ip_address = self.wan2.read_ips("ips")  # 从文件中读取
         else:
             self.wan2 = None
@@ -309,16 +314,15 @@ class Dydebug(_PluginBase):
         except Exception as e:
             logger.error(f"本地扫码任务: 本地扫码失败: {e}")
 
-    # @eventmanager.register(EventType.PluginAction)
-    def write_wan2_ip(self):
-        # if not self._enabled:
-        #     logger.error("插件未开启")
-        #     return
-
-        # if event:
-        #     event_data = event.event_data
-        #     if not event_data or event_data.get("action") != "dydebug":
-        #         return
+    @eventmanager.register(EventType.PluginAction)
+    def write_wan2_ip(self, event: Event = None):
+        if not self._enabled:
+            logger.error("插件未开启")
+            return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "dydebug":
+                return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
         self.wan2_url = None
@@ -344,7 +348,7 @@ class Dydebug(_PluginBase):
                     if browser:
                         browser.close()
                     browser = None  # 重置浏览器变量
-    
+
     @eventmanager.register(EventType.PluginAction)
     def check(self, event: Event = None):
         """
@@ -741,7 +745,7 @@ class Dydebug(_PluginBase):
             captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
             if captcha_panel:  # 出现了短信验证界面
                 if task == 'local_scanning':
-                    time.sleep(6)
+                    time.sleep(3)
                 else:
                     logger.info("等待30秒,请将短信验证码请以'？'结束,发送到<企业微信应用> 如： 110301？")
                     time.sleep(30)  # 多等30秒
@@ -1325,8 +1329,7 @@ class Dydebug(_PluginBase):
             if not self.wan2:
                 logger.info(f"服务启动")
             else:
-                logger.info(f"当前记录的IP：{self._current_ip_address}，首次运行可能为空或检测IP失败")
-                # logger.info(f"最大保存{self.wan2._max_ip}个IP，首次检测IP可能失败")
+                logger.info(f"当前记录的IP：{self._current_ip_address}，首次使用可能为空或检测IP失败")
             return [{
                 "id": self.__class__.__name__,
                 "name": f"{self.plugin_name}服务",
