@@ -143,7 +143,7 @@ class MySender:
         返回非 WeChat 通道及其对应 token 的列表
         :return: [(channel, token), ...]
         """
-        return [(channel, token) for channel, token in zip(self.channels, self.tokens) if channel != "WeChat"]
+        return [(channel, token) for channel, token in zip(self.channels, self.tokens) if channel.lower() != "wechat"]
 
     @staticmethod
     def _detect_channel(token):
@@ -214,7 +214,7 @@ class MySender:
         else:
             send_status = wechat.send_msg(title=title, text=content, userid=actual_userid)
 
-        if send_status is None:
+        if not send_status:
             return "微信通知发送错误"
         return None
 
@@ -439,7 +439,7 @@ class IpLocationParser:
         # 导航到目标页面
         page.goto(url)
         # 等待一段时间，让所有动态渲染的内容加载完成
-        page.wait_for_timeout(10000)  # 等待 10 秒钟
+        page.wait_for_timeout(8000)  # 等待 8 秒钟
         # 调用解析器解析数据
         ipv4_addresses, locations = IpLocationParser._parse(page, url)
         # 筛选出属于中国的 IP 地址
