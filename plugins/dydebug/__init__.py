@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.13"
+    plugin_version = "1.8.14"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1310,9 +1310,11 @@ class Dydebug(_PluginBase):
         if not self._enabled:
             return
         self.text = event.event_data.get("text")
-        if self.text[:6].isdigit() and len(self.text) == 7:
-            self._verification_code = self.text[:6]
-            logger.info(f"收到验证码：{self._verification_code}")
+        if len(self.text) == 7 and re.fullmatch(r".*\d{6}.*", self.text):
+            match = re.search(r"\d{6}", self.text)
+            if match:
+                self._verification_code = match.group(0)
+                logger.info(f"收到验证码：{self._verification_code}")
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
