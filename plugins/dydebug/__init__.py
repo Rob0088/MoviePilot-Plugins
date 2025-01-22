@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.16"
+    plugin_version = "1.8.17"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1110,7 +1110,7 @@ class Dydebug(_PluginBase):
         # 判断二维码是否过期
         if current_time > self._future_timestamp:
             vaild_text = "二维码已过期或没有扫码任务"
-            color = "#912CEE" if self._enabled else "#bbbbbb"
+            color = "#9B50FF" if self._enabled else "#bbbbbb"
             self._qr_code_image = None
         else:
             # 二维码有效,格式化过期时间为 年-月-日 时:分:秒
@@ -1126,7 +1126,7 @@ class Dydebug(_PluginBase):
                 "props": {
                     "style": {
                         "fontSize": "22px",
-                        "color": "#ff0000",
+                        "color": "#FFD700",
                         "textAlign": "center",
                         "margin": "20px"
                     }
