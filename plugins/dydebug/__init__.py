@@ -714,7 +714,7 @@ class Dydebug(_PluginBase):
                 if self._cookie_valid:
                     if self._my_send:
                         self._my_send.reset_limit()
-                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 1200)
+                    PyCookieCloud.increase_cookie_lifetime(self._settings_file_path, 600)
                     self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
                 browser.close()
         except Exception as e:
@@ -1110,7 +1110,7 @@ class Dydebug(_PluginBase):
         # 判断二维码是否过期
         if current_time > self._future_timestamp:
             vaild_text = "二维码已过期或没有扫码任务"
-            color = "#ff0000" if self._enabled else "#bbbbbb"
+            color = "#ed7200" if self._enabled else "#bbbbbb"
             self._qr_code_image = None
         else:
             # 二维码有效,格式化过期时间为 年-月-日 时:分:秒
