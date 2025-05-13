@@ -20,10 +20,10 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType
 
-from app.plugins.dynamicwechat.helper import PyCookieCloud, MySender, IpLocationParser
+from app.plugins.windows_test.helper import PyCookieCloud, MySender, IpLocationParser
 
 
-class DynamicWeChat(_PluginBase):
+class Windows_test(_PluginBase):
     # 插件名称
     plugin_name = "动态企微可信IP"
     # 插件描述
@@ -37,7 +37,7 @@ class DynamicWeChat(_PluginBase):
     # 作者主页
     author_url = "https://github.com/RamenRa/MoviePilot-Plugins"
     # 插件配置项ID前缀
-    plugin_config_prefix = "dynamicwechat_"
+    plugin_config_prefix = "windows_test_"
     # 加载顺序
     plugin_order = 47
     # 可使用的用户级别
@@ -248,7 +248,7 @@ class DynamicWeChat(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "windows_test":
                 return
         # 先尝试cookie登陆
         try:
@@ -282,7 +282,7 @@ class DynamicWeChat(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "windows_test":
                 return
         try:
             with sync_playwright() as p:
@@ -322,7 +322,7 @@ class DynamicWeChat(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "windows_test":
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
@@ -361,7 +361,7 @@ class DynamicWeChat(_PluginBase):
 
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
+            if not event_data or event_data.get("action") != "windows_test":
                 return
 
         if self._cookie_valid:
