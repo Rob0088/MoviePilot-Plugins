@@ -148,7 +148,7 @@ class MySender:
     @staticmethod
     def _detect_channel(token):
         """根据 token 确定通知渠道"""
-        if "WeChat" in token:
+        if "WeChat" in token or "wechat" in token:
             return "WeChat"
 
         letters_only = ''.join(re.findall(r'[A-Za-z]', token))
