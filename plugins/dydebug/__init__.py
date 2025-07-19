@@ -731,6 +731,7 @@ class Dydebug(_PluginBase):
             logger.info("检查登录状态...")
 
         success_selectors = [
+            "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
             '#_hmt_click > div.index_colRight > div > div.index_info > div > a',
             '/html/body/div/section[3]/div[1]/main/div/div/div[2]/div/div[1]/div/a',
             '#_hmt_click > div.index_colLeft > div.index_greeting.index_explore_text > div:nth-child(1)'
