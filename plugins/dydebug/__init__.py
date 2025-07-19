@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.17"
+    plugin_version = "1.8.18"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -247,7 +247,7 @@ class Dydebug(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
+            if not event_data or event_data.get("action") != "dynamicwechat":
                 return
         # 先尝试cookie登陆
         try:
@@ -281,7 +281,7 @@ class Dydebug(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
+            if not event_data or event_data.get("action") != "dynamicwechat":
                 return
         try:
             with sync_playwright() as p:
@@ -321,7 +321,7 @@ class Dydebug(_PluginBase):
             return
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
+            if not event_data or event_data.get("action") != "dynamicwechat":
                 return
         urls = ["https://ip.skk.moe/multi", "https://ip.m27.tech", "https://ip.orz.tools"]
         random.shuffle(urls)
@@ -360,7 +360,7 @@ class Dydebug(_PluginBase):
 
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "dydebug":
+            if not event_data or event_data.get("action") != "dynamicwechat":
                 return
 
         if self._cookie_valid:
@@ -729,16 +729,27 @@ class Dydebug(_PluginBase):
         # 检查是否需要进行短信验证
         if task != 'refresh_cookie':
             logger.info("检查登录状态...")
+
+        success_selectors = [
+            '#_hmt_click > div.index_colRight > div > div.index_info > div > a',
+            '/html/body/div/section[3]/div[1]/main/div/div/div[2]/div/div[1]/div/a',
+            '#_hmt_click > div.index_colLeft > div.index_greeting.index_explore_text > div:nth-child(1)'
+        ]
+
         try:
-            # 先检查登录成功后的页面状态
-            success_element = page.wait_for_selector('#check_corp_info', timeout=5000)  # 检查登录成功的元素
-            if success_element:
-                if task != 'refresh_cookie':
-                    logger.info("登录成功！")
-                return True
+            for selector in success_selectors:
+                try:
+                    # 先检查登录成功后的页面状态
+                    success_element = page.wait_for_selector(selector, timeout=3000)  # 检查登录成功的元素
+                    if success_element:
+                        if task != 'refresh_cookie':
+                            logger.info("登录成功！")
+                        return True
+                except Exception as e:
+                    logger.debug(str(e))
+                    pass
         except Exception as e:
-            logger.debug(str(e))
-            pass
+            logger.debug(f"登录检查异常: {e}")
 
         try:
             # 在这里使用更安全的方式来检查元素是否存在
@@ -757,20 +768,24 @@ class Dydebug(_PluginBase):
                     confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
                     confirm_button.click()  # 点击确认
                     time.sleep(3)  # 等待处理
-                    # 等待登录成功的元素出现
-                    success_element = page.wait_for_selector('#check_corp_info', timeout=5000)
-                    if success_element:
-                        self._verification_code = None
-                        logger.info("验证码登录成功！")
-                        return True
+
+                    # 再次检查登录状态
+                    for selector in success_selectors:
+                        try:
+                            success_element = page.wait_for_selector(selector, timeout=3000)
+                            if success_element:
+                                self._verification_code = None
+                                logger.info("验证码登录成功！")
+                                return True
+                        except:
+                            continue
                 else:
                     logger.error("未收到短信验证码")
                     return False
         except Exception as e:
             # logger.debug(str(e))  # 基于bug运行,请不要将错误输出到日志
             # try:  # 没有登录成功,也没有短信验证码
-            if self.find_qrc(
-                    page) and not task == 'refresh_cookie' and not task == 'local_scanning':  # 延长任务找到的二维码不会被发送,所以不算用户没有扫码
+            if self.find_qrc(page) and task not in ['refresh_cookie', 'local_scanning']:  # 延长任务找到的二维码不会被发送,所以不算用户没有扫码
                 logger.warning(f"用户没有扫描二维码")
                 return False
 
@@ -800,7 +815,7 @@ class Dydebug(_PluginBase):
         app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
         for app_url in app_urls:
             app_id = app_url.split("/")[-1]
-            if app_id.startswith("100000") and len(app_id) == 6:
+            if app_id.startswith("100000") and len(app_id) == 7:
                 self._ip_changed = False
                 logger.warning(f"请根据 https://github.com/RamenRa/MoviePilot-Plugins 的说明进行配置应用ID")
                 return
@@ -1126,7 +1141,7 @@ class Dydebug(_PluginBase):
                 "props": {
                     "style": {
                         "fontSize": "22px",
-                        "color": "#FFD700",
+                        "color": "#FFB90F",
                         "textAlign": "center",
                         "margin": "20px"
                     }
@@ -1352,3 +1367,4 @@ class Dydebug(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(str(e))
+
