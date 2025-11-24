@@ -143,7 +143,7 @@ class Dydebug(_PluginBase):
         if self.version != "v1":
             self._my_send = MySender(self._notification_token, func=self.post_message)
         else:
-            logger.info("当前输入：" {self._notification_token})
+            logger.info(f"当前输入：{self._notification_token}")
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
