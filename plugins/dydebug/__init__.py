@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "1.8.18"
+    plugin_version = "1.8.19"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -143,6 +143,7 @@ class Dydebug(_PluginBase):
         if self.version != "v1":
             self._my_send = MySender(self._notification_token, func=self.post_message)
         else:
+            logger.info("当前输入：" {self._notification_token})
             self._my_send = MySender(self._notification_token)
         if not self._my_send.init_success:    # 没有输入通知方式,不通知
             self._my_send = None
