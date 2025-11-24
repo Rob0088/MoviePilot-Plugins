@@ -281,7 +281,9 @@ class MySender:
         if image:
             payload = {
                 "title": title,
-                "msg": f'<div><img src="{image}" style="max-width:100%;"><br>{content}</div>',
+                # "msg": f'<div><img src="{image}" style="max-width:100%;"><br>{content}</div>',
+                "msg": f'<img src="{image}" style="max-width:100%;">' + (f"<br>{content}" if content else ""),
+                "msgType": "html",
                 "htmlHeight": 400
             }
         else:
