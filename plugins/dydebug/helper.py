@@ -150,10 +150,11 @@ class MySender:
         """根据 token 确定通知渠道"""
         if "WeChat" in token or "wechat" in token:
             return "WeChat"
-
         letters_only = ''.join(re.findall(r'[A-Za-z]', token))
         if token.lower().startswith("sct"):
             return "ServerChan"
+        elif "http" in letters_only.islower():
+            return "MeoW"
         elif letters_only.isupper():
             return "AnPush"
         else:
@@ -195,6 +196,8 @@ class MySender:
             return self._send_wechat(title, content, image, token)
         elif channel == "ServerChan":
             return self._send_serverchan(title, content, image, diy_token)
+        elif channel == "MeoW":
+            return self._send_meow(title, content, image, diy_token)
         elif channel == "AnPush":
             return self._send_anpush(title, content, image, diy_token)
         elif channel == "PushPlus":
@@ -251,10 +254,7 @@ class MySender:
         return None
 
     def _send_anpush(self, title, content, image, diy_token=None):
-        if diy_token:
-            token = diy_token
-        else:
-            token = self.tokens[self.current_index]  # 获取当前通道对应的 token
+        token = diy_token if diy_token else self.tokens[self.current_index]
         if ',' in token:
             channel, token = token.split(',', 1)
         else:
@@ -275,11 +275,40 @@ class MySender:
             return "AnPush 消息通道未找到"
         return None
 
-    def _send_pushplus(self, title, content, image, diy_token=None):
-        if diy_token:
-            token = diy_token
+    def _send_meow(self, title, content, image, diy_token=None):
+        token = diy_token if diy_token else self.tokens[self.current_index]
+        meow_url = f"{token}"
+        if image:
+            payload = {
+                "title": title,
+                "msg": f'<div><img src="{image}" style="max-width:100%;"><br>{content}</div>',
+                "htmlHeight": 400
+            }
         else:
-            token = self.tokens[self.current_index]  # 获取当前通道对应的 token
+            payload = {
+                "title": title,
+                "msg": content,
+                "msgType": "text",
+            }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        # ------------- 请求发送 -------------
+        try:
+            response = requests.post(meow_url, data=payload, headers=headers)
+            result = response.json()
+        except Exception as e:
+            return f"MeoW 请求失败: {e}"
+
+        # ------------- 返回值处理 -------------
+        if result.get("status") != 200:
+            return f"MeoW 通知错误: 代码{result.get("status")}{result.get('message', '未知错误')}"
+
+        return None
+
+    def _send_pushplus(self, title, content, image, diy_token=None):
+        token = diy_token if diy_token else self.tokens[self.current_index]
         pushplus_url = f"http://www.pushplus.plus/send/{token}"
         # PushPlus发送逻辑
         data = {
