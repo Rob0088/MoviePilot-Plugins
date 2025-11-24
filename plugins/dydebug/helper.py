@@ -153,7 +153,7 @@ class MySender:
         letters_only = ''.join(re.findall(r'[A-Za-z]', token))
         if token.lower().startswith("sct"):
             return "ServerChan"
-        elif "http" in letters_only.islower():
+        elif "http" in token.lower():
             return "MeoW"
         elif letters_only.isupper():
             return "AnPush"
@@ -303,7 +303,7 @@ class MySender:
 
         # ------------- 返回值处理 -------------
         if result.get("status") != 200:
-            return f"MeoW 通知错误: 代码{result.get("status")}{result.get('message', '未知错误')}"
+            return f"MeoW 通知错误: 代码{result.get('status')}{result.get('message', '未知错误')}"
 
         return None
 
