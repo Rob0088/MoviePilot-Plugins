@@ -302,8 +302,10 @@ class MySender:
             return f"MeoW 请求失败: {e}"
 
         # ------------- 返回值处理 -------------
-        if result.get("status") != 200:
-            return f"MeoW 通知错误: 代码{result.get('status')}{result.get('message', '未知错误')}"
+        status = result.get("status")
+        if status != 200:
+            message = result.get('message', '未知错误')
+            return f"MeoW 通知错误: 代码{status} - {message}"
 
         return None
 
