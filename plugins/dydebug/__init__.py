@@ -18,8 +18,9 @@ from app.core.event import eventmanager, Event
 from app.helper.cookiecloud import CookieCloudHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.plugins.dydebug.helper import PyCookieCloud, MySender, IpLocationParser, JsonFieldManager
 from app.schemas.types import EventType
+
+from .helper import PyCookieCloud, MySender, IpLocationParser, JsonFieldManager
 
 
 class Dydebug(_PluginBase):
@@ -30,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.0.4"
+    plugin_version = "2.0.5"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -72,7 +73,7 @@ class Dydebug(_PluginBase):
     _notification_token = ''
     # 标记企业微信通知可用
     _wechat_available = True
-    # 标记IP变动后 是否发送通知
+    # 仅标记IP变动后 通知发送过了没有
     _send_notification = False
 
     # 匹配ip地址的正则
@@ -122,7 +123,7 @@ class Dydebug(_PluginBase):
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.1'
         })
         return context
-        
+
     if hasattr(settings, 'VERSION_FLAG'):
         version = settings.VERSION_FLAG  # V2
     else:
@@ -242,30 +243,23 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-    
-        # 条件1: 配置了通知 且 不启用"IP变动后通知" 且 微信通知有效
-        if self._my_send and not self._await_ip and self._wechat_available:
+        logger.info(f"self._my_send"{self._my_send} ""f"self._wechat_available"{self._wechat_available} "")
+        logger.info(f"self._my_send"{self.other_channel} ""f"self._wechat_available"{self._wechat_available} )
+        if self._my_send and not self._await_ip and self._wechat_available:  # 配置了通知 且 不启用“IP变动后通知 且 微信通知有效
             error = self._my_send.send(
                 title="cookie已失效,请及时更新",
-                content="请在企业微信应用发送/push_qr, 验证码以'？'结束发送到企业微信应用。 如果使用'微信通知'请确保公网IP还没有变动",
+                content="请在企业微信应用发送/push_qr, 验证码以'？'结束发送到企业微信应用。 如果使用’微信通知‘请确保公网IP还没有变动",
                 image=None, force_send=False
             )
             if error:
                 logger.info(f"cookie失效通知发送失败,原因：{error}")
             return None
-    
-        # 条件1未满足，打印诊断变量
-        logger.info(
-            f"[debug] 条件1(微信通知)未满足: "
-            f"_my_send={self._my_send is not None}, "
-            f"_await_ip={self._await_ip}, "
-            f"_wechat_available={self._wechat_available}"
-        )
-    
-        # 条件2: 微信通知无效 且 配置了第三方通知通道
-        other_channel = getattr(self._my_send, 'other_channel', None) if self._my_send else None
-        if not self._wechat_available and other_channel:
+        elif not self._wechat_available and self._my_send.other_channel:
+            '''
+             # 微信通知无效（IP已不一致） 且 配置了第三方通知 且 没有发送过通知
+            '''
             for channel, token in self._my_send.other_channel:
+                # logger.info(f"正常尝试：{channel} {token}")
                 error = self._my_send.send(
                     title="cookie已失效,且微信通知失效",
                     content="请在企业微信应用发送/push_qr, 验证码以'？'结束发送到企业微信应用。",
@@ -275,24 +269,9 @@ class Dydebug(_PluginBase):
                     logger.error(f"通道 {channel} 发送失败，原因：{error}")
                 else:
                     return None
+        else:
+            logger.error(f"通道 {self._my_send} 发送失败，原因：{error}")
             return None
-    
-        # 条件2未满足，打印诊断变量
-        logger.info(
-            f"[debug] 条件2(第三方通知)未满足: "
-            f"_wechat_available={self._wechat_available}, "
-            f"_my_send={self._my_send is not None}, "
-            f"other_channel={other_channel is not None and bool(other_channel)}"
-        )
-    
-        # 兜底：无任何可用通道（修复原代码 error 未定义的 bug）
-        logger.error(
-            f"[debug] 无可用通知通道可发送cookie失效提醒: "
-            f"_my_send={self._my_send is not None}, "
-            f"_await_ip={self._await_ip}, "
-            f"_wechat_available={self._wechat_available}"
-        )
-        return None
 
     @eventmanager.register(EventType.PluginAction)
     def forced_change(self, event: Event = None):
@@ -441,7 +420,7 @@ class Dydebug(_PluginBase):
                 self._wechat_available = False  # 标记不可用
             logger.info("----------------------本次任务结束----------------------")
         else:
-            if self._send_notification:  # 第三方通知已通知，日志留痕
+            if self._send_notification:  # 配合以上等待IP变更功能的判断 第三方通知已通知，日志留痕
                 logger.info("cookie已失效请及时更新，微信通知可能已经无法使用。已通知第三方通知")
             else:
                 logger.info("cookie已失效请及时更新,本次不检查公网IP")
