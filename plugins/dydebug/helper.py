@@ -148,15 +148,12 @@ class MySender:
     @staticmethod
     def _detect_channel(token):
         """根据 token 确定通知渠道"""
-        if "WeChat" in token or "wechat" in token:
+        if "wechat" in token.lower():
             return "WeChat"
-        letters_only = ''.join(re.findall(r'[A-Za-z]', token))
         if token.lower().startswith("sct"):
             return "ServerChan"
-        elif "http" in token.lower():
-            return "MeoW"
-        elif letters_only.isupper():
-            return "AnPush"
+        elif "iyuu" in token.lower():
+            return "IYUU"
         else:
             return "PushPlus"
 
@@ -196,10 +193,8 @@ class MySender:
             return self._send_wechat(title, content, image, token)
         elif channel == "ServerChan":
             return self._send_serverchan(title, content, image, diy_token)
-        elif channel == "MeoW":
-            return self._send_meow(title, content, image, diy_token)
-        elif channel == "AnPush":
-            return self._send_anpush(title, content, image, diy_token)
+        elif channel == "IYUU":
+            return self._send_iyuu(title, content, image, diy_token)
         elif channel == "PushPlus":
             return self._send_pushplus(title, content, image, diy_token)
         else:
@@ -253,66 +248,44 @@ class MySender:
             return f"Server酱通知错误: {result.get('message')}"
         return None
 
-    def _send_anpush(self, title, content, image, diy_token=None):
-        token = diy_token if diy_token else self.tokens[self.current_index]
-        if ',' in token:
-            channel, token = token.split(',', 1)
+    def _send_iyuu(self, title, content, image, diy_token=None):
+        """
+        发送爱语飞飞通知
+        :param title: 通知标题
+        :param content: 通知内容（无图片时使用）
+        :param image: 图片URL（有图片时使用，会覆盖content）
+        :param diy_token: 自定义token，若为None则从self.tokens中取
+        :return: 成功返回None，失败返回错误字符串
+        """
+        # 确定使用的token
+        if diy_token:
+            token = diy_token
         else:
-            return "AnPush可能没有配置消息通道ID"
-        url = f"https://api.anpush.com/push/{token}"
-        payload = {
-            "title": title,
-            "content": f"<img src=\"{image}\" width=\"100%\">" if image else content,
-            "channel": channel
-        }
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        response = requests.post(url, headers=headers, data=payload)
-        result = response.json()
-        # 判断返回的code和msgIds
-        if result.get('code') != 200:
-            return f"AnPush: {result.get('msg')}"
-        elif not result.get('data') or not result['data'].get('msgIds'):
-            return "AnPush 消息通道未找到"
-        return None
+            token = self.tokens[self.current_index]  # 假设self.tokens存在
 
-    def _send_meow(self, title, content, image, diy_token=None):
-        token = diy_token if diy_token else self.tokens[self.current_index]
-        meow_url = f"{token}"
+        # 构造URL和请求体
+        url = f"https://iyuu.cn/{token}.send"
+        headers = {"Content-Type": "application/json; charset=UTF-8"}
         if image:
-            payload = {
-                "title": title,
-                # "msg": f'<div><img src="{image}" style="max-width:100%;"><br>{content}</div>',
-                "msg": f'<img src="{image}" style="max-width:100%;">' + (f"<br>{content}" if content else ""),
-                "msgType": "html",
-                "htmlHeight": 400
-            }
+            desp = f"![img]({image})"  # 发送图片
         else:
-            payload = {
-                "title": title,
-                "msg": content,
-                "msgType": "text",
-            }
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+            desp = content  # 发送文字内容
+        payload = {"text": title, "desp": desp}
 
-        # ------------- 请求发送 -------------
         try:
-            response = requests.post(meow_url, data=payload, headers=headers)
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
             result = response.json()
+            if result.get("errcode") != 0:
+                return f"爱语飞飞通知错误: {result.get('errmsg')}"
+            return None
         except Exception as e:
-            return f"MeoW 请求失败: {e}"
-
-        # ------------- 返回值处理 -------------
-        status = result.get("status")
-        if status != 200:
-            message = result.get('message', '未知错误')
-            return f"MeoW 通知错误: 代码{status} - {message}"
-
-        return None
+            return f"爱语飞飞请求异常: {str(e)}"
 
     def _send_pushplus(self, title, content, image, diy_token=None):
-        token = diy_token if diy_token else self.tokens[self.current_index]
+        if diy_token:
+            token = diy_token
+        else:
+            token = self.tokens[self.current_index]  # 获取当前通道对应的 token
         pushplus_url = f"http://www.pushplus.plus/send/{token}"
         # PushPlus发送逻辑
         data = {
@@ -563,3 +536,69 @@ class IpLocationParser:
         # 写入更新后的 IP 地址
         self.overwrite_ips(field, updated_ips)
 
+
+
+class JsonFieldManager:
+    """
+    通用 JSON 配置文件字段管理器。
+    所有操作均遵循「读-改-写」模式，确保不修改无关字段。
+    """
+
+    def __init__(self, settings_file_path: str):
+        self._settings_file_path = settings_file_path
+
+    def _load(self) -> dict:
+        """读取完整 JSON 内容；若文件损坏或不存在则返回空字典。"""
+        try:
+            with open(self._settings_file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {}
+
+    def _save(self, data: dict) -> None:
+        """直接写入原文件。"""
+        with open(self._settings_file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+
+    # -------------------------- 公开接口 --------------------------
+
+    def get(self, field: str, default: Any = None) -> Any:
+        """
+        读取指定字段的值。
+        :param field: 字段名
+        :param default: 字段不存在时返回的默认值
+        :return: 字段值或 default
+        """
+        return self._load().get(field, default)
+
+    def add(self, field: str, value: Any) -> bool:
+        """
+        添加新字段。若字段已存在则返回 False，不会修改任何已有数据。
+        :param field: 要添加的字段名
+        :param value: 字段值
+        :return: 是否添加成功
+        """
+        data = self._load()
+        if field in data:
+            return False
+        data[field] = value
+        self._save(data)
+        return True
+
+    def update(self, field: str, value: Any) -> None:
+        """
+        修改指定字段的值；若字段不存在则自动创建。
+        不修改其他字段。
+        :param field: 要修改或创建的字段名
+        :param value: 新值
+        """
+        data = self._load()
+        data[field] = value
+        self._save(data)
+
+    def set(self, field: str, value: Any) -> None:
+        """
+        新增或修改字段（字段不存在则创建，存在则覆盖）。
+        不修改其他字段。与 update 行为一致。
+        """
+        self.update(field, value)
