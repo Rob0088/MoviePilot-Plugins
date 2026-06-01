@@ -11,7 +11,7 @@ import pytz
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from playwright.sync_api import sync_playwright
+from cloakbrowser import launch_context
 
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -30,7 +30,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
