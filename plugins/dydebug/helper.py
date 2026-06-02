@@ -267,7 +267,7 @@ class MySender:
         url = f"https://iyuu.cn/{token}.send"
         headers = {"Content-Type": "application/json; charset=UTF-8"}
         if image:
-            desp = f"![img]({image})"  # 发送图片
+            desp = f'<img src="{image}" style="max-width: 100%; height: auto;" />'
         else:
             desp = content  # 发送文字内容
         payload = {"text": title, "desp": desp}
