@@ -136,6 +136,9 @@ class MySender:
         self.first_text_sent = False  # 是否已发送过纯文本消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
+        self.quiet_flag = False    # 安静模式标志
+        if self.tokens.lower().endswith('||q'):
+            self.quiet_flag = True
 
     @property
     def other_channel(self):
