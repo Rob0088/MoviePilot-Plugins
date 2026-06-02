@@ -130,16 +130,22 @@ class PyCookieCloud:
 
 class MySender:
     def __init__(self, token=None, func=None):
-        self.raw_token = token  # 保存原始字符串
+        self.raw_token = token or ""
+
+        self.quiet_flag = False    # 安静模式标志
+        if self.raw_token.endswith("||Q") or self.raw_token.endswith("||q"):
+            self.quiet_flag = True
+            token = self.raw_token.rsplit("||", 1)[0]  # 去掉控制段
+        else:
+            token = self.raw_token
+
         self.tokens = token.split('||') if token and '||' in token else [token] if token else []
         self.channels = [MySender._detect_channel(t) for t in self.tokens]
         self.current_index = 0  # 当前使用的 token 和 channel 的索引
         self.first_text_sent = False  # 是否已发送过纯文本消息
         self.init_success = bool(self.tokens)  # 标识初始化是否成功
         self.post_message_func = func  # V2 微信模式的 post_message 方法
-        self.quiet_flag = False    # 安静模式标志
-        if self.raw_token.lower().endswith('||q'):
-            self.quiet_flag = True
+
 
     @property
     def other_channel(self):
@@ -151,12 +157,14 @@ class MySender:
 
     @staticmethod
     def _detect_channel(token):
-        """根据 token 确定通知渠道"""
-        if "wechat" in token.lower():
+        """根据 token 判断通知渠道"""
+        token = token.lower()
+
+        if "wechat" in token:
             return "WeChat"
-        if token.lower().startswith("sct"):
+        if token.startswith("sct"):
             return "ServerChan"
-        elif "iyuu" in token.lower():
+        elif "iyuu" in token:
             return "IYUU"
         else:
             return "PushPlus"
