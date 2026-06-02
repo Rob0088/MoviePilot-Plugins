@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.0.6"
+    plugin_version = "2.0.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -243,10 +243,10 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-        logger.info(f"self._my_send{self._my_send} self._wechat_available{self._wechat_available}")
-        # logger.info(f"self._my_send"{self._my_send} ""f"self._wechat_available"{self._wechat_available} "")
-        logger.info(f"self.other_channel{self.other_channel} self._wechat_available{self._wechat_available}")
-        # logger.info(f"self._my_send"{self.other_channel} ""f"self._wechat_available"{self._wechat_available} )
+        logger.info(f"self._my_send 类型: {type(self._my_send)}")
+        logger.info(f"self._my_send 的所有属性: {dir(self._my_send)}")
+        if hasattr(self._my_send, '__dict__'):
+            logger.info(f"self._my_send.__dict__: {self._my_send.__dict__}")
         if self._my_send and not self._await_ip and self._wechat_available:  # 配置了通知 且 不启用“IP变动后通知 且 微信通知有效
             error = self._my_send.send(
                 title="cookie已失效,请及时更新",
