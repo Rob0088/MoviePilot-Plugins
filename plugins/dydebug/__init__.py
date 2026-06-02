@@ -272,7 +272,7 @@ class Dydebug(_PluginBase):
                 else:
                     return None
         else:
-            logger.error(f"通道 {self._my_send} 发送失败，原因：{error}")
+            # logger.error(f"通道 {self._my_send} 发送失败，原因：{error}")
             return None
 
     @eventmanager.register(EventType.PluginAction)
