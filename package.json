@@ -2,8 +2,8 @@
     "Dydebug": {
         "name": "动态企微可信IP_Debug",
         "description": "修改企微应用可信IP，可本地扫码刷新Cookie，支持第三方推送。验证码以?结尾发送到企业微信应用",
-        "labels": ["消息通知"],
-        "version": "2.1.0",
+        "labels": "消息通知",
+        "version": "2.1.1",
         "icon": "Wecom_A.png",
         "author": "RamenRa",
         "level": 2,
@@ -23,7 +23,7 @@
     "windows_test": {
         "name": "动态企微可信IP_windows",
         "description": "修改企微应用可信IP，可本地扫码刷新Cookie，支持第三方推送。验证码以?结尾发送到企业微信应用",
-        "labels": ["消息通知"],
+        "labels": "消息通知",
         "version": "1.0.1",
         "icon": "Wecom_A.png",
         "author": "RamenRa",
