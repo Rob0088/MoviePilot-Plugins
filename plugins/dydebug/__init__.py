@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.0.9"
+    plugin_version = "2.1.0"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -44,7 +44,7 @@ class Dydebug(_PluginBase):
     auth_level = 2
     # 检测间隔时间,默认10分钟
     _refresh_cron = '*/10 * * * *'
-
+    
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
@@ -79,7 +79,7 @@ class Dydebug(_PluginBase):
     # 匹配ip地址的正则
     _ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
     # 获取ip地址的网址列表
-    _ip_urls = ["https://myip.ipip.net", "https://ddns.oray.com/checkip", "https://ip.3322.net", "https://4.ipw.cn"]
+    _ip_urls = ["https://myip.ipip.net", "https://ddns.oray.com/checkip", "https://ip.3322.net", "https://r.inews.qq.com/api/ip2city", "https://uapis.cn/api/v1/network/myip"]
     # 当前ip地址
     _current_ip_address = '0.0.0.0'
     # 企业微信登录
@@ -243,14 +243,6 @@ class Dydebug(_PluginBase):
 
     def _send_cookie_false(self):
         self._cookie_valid = False
-        # 打印第一个 if 的各个条件
-        logger.info(f"[DEBUG] self._my_send: {bool(self._my_send)}")
-        logger.info(f"[DEBUG] not self._await_ip: {not self._await_ip}")
-        logger.info(f"[DEBUG] self._wechat_available: {self._wechat_available}")
-        
-        # 打印第二个 elif 的条件
-        logger.info(f"[DEBUG] not self._wechat_available: {not self._wechat_available}")
-        logger.info(f"[DEBUG] self._my_send.other_channel (bool): {bool(self._my_send and self._my_send.other_channel)}")
         if self._my_send and not self._await_ip and self._wechat_available:  # 配置了通知 且 不启用“IP变动后通知 且 微信通知有效
             error = self._my_send.send(
                 title="cookie已失效,请及时更新",
@@ -262,7 +254,7 @@ class Dydebug(_PluginBase):
             return None
         elif not self._wechat_available and self._my_send.other_channel:
             '''
-             # 微信通知无效（IP已不一致） 且 配置了第三方通知 且 没有发送过通知
+             # 微信通知无效（IP已不一致） 且 配置了第三方通知 
             '''
             for channel, token in self._my_send.other_channel:
                 # logger.info(f"正常尝试：{channel} {token}")
@@ -431,8 +423,7 @@ class Dydebug(_PluginBase):
             else:
                 '''
                  配置了第三方通知 即使cookie失效也检测IP
-                 和“IP变更后通知”功能重复，但可以让MPV2在微信通知作为首选时，第三方通知依然可以正常作为备用
-                 “IP变更后通知”现默认开启，界面按钮暂时保留
+                 让MPV2在微信通知作为首选时，第三方通知依然可以正常作为备用
                 '''
                 if self._my_send.other_channel:
                     logger.info("开始检测公网IP,等待IP变动后发送第三方通知")
@@ -440,7 +431,7 @@ class Dydebug(_PluginBase):
                     return
                 else:
                     logger.info("cookie已失效请及时更新,本次不检查公网IP")
-                    return 
+                    return
 
     def CheckIP(self, func=None):
         if self.wan2:
@@ -904,7 +895,7 @@ class Dydebug(_PluginBase):
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
-                if self._my_send:
+                if self._my_send and not self._my_send.quiet_flag:  # 没有开启安静模式才发通知
                     self._my_send.send(title="更新可信IP成功",
                                        content='应用: ' + app_id + ' 输入IP：' + masked_ip_string,
                                        force_send=True, diy_channel="WeChat")
