@@ -130,14 +130,19 @@ class PyCookieCloud:
 
 class MySender:
     def __init__(self, token=None, func=None):
+        self.raw_token = token  # 保存原始字符串
+
         self.tokens = token.split('||') if token and '||' in token else [token] if token else []
         self.channels = [MySender._detect_channel(t) for t in self.tokens]
-        self.current_index = 0  # 当前使用的 token 和 channel 的索引
-        self.first_text_sent = False  # 是否已发送过纯文本消息
-        self.init_success = bool(self.tokens)  # 标识初始化是否成功
-        self.post_message_func = func  # V2 微信模式的 post_message 方法
-        self.quiet_flag = False    # 安静模式标志
-        if self.tokens.lower().endswith('||q'):
+
+        self.current_index = 0
+        self.first_text_sent = False
+        self.init_success = bool(self.tokens)
+        self.post_message_func = func
+        self.quiet_flag = False
+
+        # ✅ 在原始字符串上判断
+        if self.raw_token.endswith('||q'):
             self.quiet_flag = True
 
     @property
