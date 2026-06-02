@@ -3,12 +3,13 @@
     "name": "动态企微可信IP_Debug",
     "description":  "修改企微应用可信IP，可本地扫码刷新Cookie，支持第三方推送。验证码以？结尾发送到企业微信应用",
     "labels": "消息通知",
-    "version": "2.0.9",
+    "version": "2.1.0",
     "icon": "Wecom_A.png",
     "author": "RamenRa",
     "level": 2,
     "v2": true,
     "history": {
+        "v2.1.0": "优化MP/Nas关闭期间IP变动无法检测到问题。MPV2微信作为主通知也支持第三方作为备用。支持使用"||Q",在修改IP时不发送通知
         "v1.8.20": "支持MeoW",
         "v1.8.18": "修复检查登录元素",
         "v1.4.0": "可以指定获取ip地址url,修复不使用cc时cookie失效过快，v1可同时配置多个通知方式，server酱可以将文本发送到server3,二维码给服务号",
