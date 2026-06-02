@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.0.8"
+    plugin_version = "2.0.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -429,7 +429,18 @@ class Dydebug(_PluginBase):
             if self._send_notification:  # 配合以上等待IP变更功能的判断 第三方通知已通知，日志留痕
                 logger.info("cookie已失效请及时更新，微信通知可能已经无法使用。已通知第三方通知")
             else:
-                logger.info("cookie已失效请及时更新,本次不检查公网IP")
+                '''
+                 配置了第三方通知 即使cookie失效也检测IP
+                 和“IP变更后通知”功能重复，但可以让MPV2在微信通知作为首选时，第三方通知依然可以正常作为备用
+                 “IP变更后通知”现默认开启，界面按钮暂时保留
+                '''
+                if self._my_send.other_channel:
+                    logger.info("开始检测公网IP,等待IP变动后发送第三方通知")
+                    self.CheckIP()
+                    return
+                else:
+                    logger.info("cookie已失效请及时更新,本次不检查公网IP")
+                    return 
 
     def CheckIP(self, func=None):
         if self.wan2:
