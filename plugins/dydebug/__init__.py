@@ -44,7 +44,7 @@ class Dydebug(_PluginBase):
     auth_level = 2
     # 检测间隔时间,默认10分钟
     _refresh_cron = '*/10 * * * *'
-    
+
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
@@ -141,6 +141,7 @@ class Dydebug(_PluginBase):
         self._cookie_header = ""
         self._settings_file_path = self.get_data_path() / "settings.json"
         self.cfg = JsonFieldManager(self._settings_file_path)
+        self._qr_running = False
         if config:
             self._enabled = config.get("enabled")
             self._notification_token = config.get("notification_token")
@@ -252,7 +253,7 @@ class Dydebug(_PluginBase):
             if error:
                 logger.info(f"cookie失效通知发送失败,原因：{error}")
             return None
-        elif not self._wechat_available and self._my_send.other_channel:
+        elif self._my_send and not self._wechat_available and self._my_send.other_channel: #  self._my_send 防止空对象
             '''
              # 微信通知无效（IP已不一致） 且 配置了第三方通知 
             '''
@@ -324,7 +325,8 @@ class Dydebug(_PluginBase):
             page = context.new_page()
             page.goto(self._wechatUrl)
             time.sleep(3)  # 页面加载等待时间
-            if self.find_qrc(page):
+            img, _ = self.find_qrc(page)
+            if img:
                 current_time = datetime.now()
                 future_time = current_time + timedelta(seconds=110)
                 self._future_timestamp = int(future_time.timestamp())
@@ -440,7 +442,7 @@ class Dydebug(_PluginBase):
         else:
             url, ip_address = self.get_ip_from_url()
 
-        if ip_address == "获取IP失败" or not url:
+        if not ip_address or ip_address == "获取IP失败" or not url:
             logger.error("获取IP失败 不操作可信IP")
             return False
 
@@ -503,7 +505,7 @@ class Dydebug(_PluginBase):
             urls = self._input_id_list
         else:
             urls = self._ip_urls
-
+        logger.info(f"进入了get_ip_from_url")
         # 随机化 URL 列表
         random.shuffle(urls)
         if not self.wan2:
@@ -511,6 +513,7 @@ class Dydebug(_PluginBase):
                 try:
                     response = requests.get(url, timeout=3)
                     if response.status_code == 200:
+                        logger.info(f"{url} 返回内容: {response.text[:80]}")
                         ip_address = re.search(self._ip_pattern, response.text)
                         if ip_address:
                             return url, ip_address.group()  # 返回匹配的 IP 地址
@@ -632,7 +635,7 @@ class Dydebug(_PluginBase):
                         formatted_cookies[domain] = []
                     formatted_cookies[domain].append(cookie)
                 if self._cc_server.update_cookie(formatted_cookies):
-                    logger.info("更新 CookieCloud 成功")
+                    logger.info("更新 CookieCloud 成功，如没有CC服务器同步cookie请不要在其他地方登录企业微信")
                     self._cookie_valid = True
                     self._is_special_upload = True
                 else:
@@ -654,7 +657,7 @@ class Dydebug(_PluginBase):
                     self._is_special_upload = False
                     return
                 else:
-                    logger.info("更新本地 Cookie成功")
+                    logger.info("更新本地 Cookie成功，请不要在其他地方登录企业微信")
                     self._is_special_upload = True
                     self._saved_cookie = current_cookies  # 保存
                     self._cookie_valid = True
@@ -821,7 +824,7 @@ class Dydebug(_PluginBase):
                         except:
                             continue
                 else:
-                    logger.error("未收到短信验证码")
+                    logger.error("未收到短信验证码，请以问号结尾发送到企业微信应用。如：510010?")
                     return False
         except Exception as e:
             # logger.debug(str(e))  # 基于bug运行,请不要将错误输出到日志
@@ -891,7 +894,7 @@ class Dydebug(_PluginBase):
                 将填入企业微信的IP写入settings.json 
                 应对MP/NAS长时间关闭后公网IP和可信IP不一致
                 '''
-                self.wan2 = IpLocationParser(self._settings_file_path, max_ips=1)
+                # self.wan2 = IpLocationParser(self._settings_file_path, max_ips=1)
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
                 logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
@@ -1302,6 +1305,11 @@ class Dydebug(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "push_qrcode":
                 return
+        if self._qr_running:
+            # logger.warning("二维码任务正在执行，忽略重复触发")
+            return
+        self._qr_running = True
+
         context = None
         try:
             context = self._launch_browser_context(headless=True)
@@ -1345,6 +1353,7 @@ class Dydebug(_PluginBase):
         finally:
             if context:
                 context.close()
+            self._qr_running = False
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
