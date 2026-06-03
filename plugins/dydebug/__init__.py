@@ -45,6 +45,7 @@ class Dydebug(_PluginBase):
     # 检测间隔时间,默认10分钟
     _refresh_cron = '*/10 * * * *'
 
+
     # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
@@ -505,7 +506,6 @@ class Dydebug(_PluginBase):
             urls = self._input_id_list
         else:
             urls = self._ip_urls
-        logger.info(f"进入了get_ip_from_url")
         # 随机化 URL 列表
         random.shuffle(urls)
         if not self.wan2:
@@ -513,7 +513,6 @@ class Dydebug(_PluginBase):
                 try:
                     response = requests.get(url, timeout=3)
                     if response.status_code == 200:
-                        logger.info(f"{url} 返回内容: {response.text[:80]}")
                         ip_address = re.search(self._ip_pattern, response.text)
                         if ip_address:
                             return url, ip_address.group()  # 返回匹配的 IP 地址
