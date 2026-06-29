@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.1.2"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -46,7 +46,7 @@ class Dydebug(_PluginBase):
     _refresh_cron = '*/10 * * * *'
 
 
-    # ------------------------------------------私有属性------------------------------------------
+   # ------------------------------------------私有属性------------------------------------------
     _enabled = False  # 开关
     _cron = None
     _onlyonce = False
@@ -115,12 +115,13 @@ class Dydebug(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
 
     @staticmethod
-    def _launch_browser_context(headless: bool = True):
+    async def _launch_browser_context(headless: bool = True):
         """
         使用 CloakBrowser 启动企业微信页面上下文，统一注入中文语言环境。
         """
-        context = launch_context(headless=headless, args=['--lang=zh-CN'])
-        context.set_extra_http_headers({
+        # context = launch_context(headless=headless, args=['--lang=zh-CN'])
+        context = await launch_context_async(headless=True)
+        await context.set_extra_http_headers({
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.1'
         })
         return context
@@ -132,6 +133,7 @@ class Dydebug(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         # 清空配置
+        self._last_code = ""
         self._notification_token = ''
         self._cron = '*/10 * * * *'
         self._ip_changed = True
@@ -149,7 +151,6 @@ class Dydebug(_PluginBase):
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._input_id_list = config.get("input_id_list")
-            # self._current_ip_address = config.get("current_ip_address")
             self._forced_update = config.get("forced_update")
             self._local_scan = config.get("local_scan")
             self._use_cookiecloud = config.get("use_cookiecloud")
@@ -186,53 +187,70 @@ class Dydebug(_PluginBase):
                 if self.wan2:
                     if not self._forced_update or not self._local_scan:
                         logger.info("多网络出口检查需要时间较长，预计25秒内完成")
-                        self._scheduler.add_job(func=self.write_wan2_ip, trigger='date',
-                                                run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
-                                                    seconds=3),
-                                                name="多网络出口获取IP")  # 添加任务
-                        self._scheduler.add_job(func=self.check, trigger='date',
-                                                run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
-                                                    seconds=20),
-                                                name="多网络出口检查IP")  # 添加任务
+                        # 改用同步包装函数
+                        self._scheduler.add_job(
+                            func=self.write_wan2_ip,
+                            trigger='date',
+                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                            name="多网络出口获取IP"
+                        )
+                        self._scheduler.add_job(
+                            func=self.check,  # check 内部已做 asyncio.run 兼容，无需包装
+                            trigger='date',
+                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=20),
+                            name="多网络出口检查IP"
+                        )
 
                 else:
                     if not self._forced_update or not self._local_scan:
-                        self._scheduler.add_job(func=self.check, trigger='date',
-                                                run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                                name="检测公网IP")  # 添加任务
-                        # logger.info("启用多网口检测时禁用‘立即检测一次’功能")
+                        self._scheduler.add_job(
+                            func=self.check,
+                            trigger='date',
+                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                            name="检测公网IP"
+                        )
                 # 关闭一次性开关
                 self._onlyonce = False
 
             if self._forced_update:
                 if not self._local_scan:
                     logger.info("使用Cookie,强制更新公网IP")
-                    self._scheduler.add_job(func=self.forced_change, trigger='date',
-                                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                            name="强制更新公网IP")  # 添加任务
+                    self._scheduler.add_job(
+                        func=self.forced_change,
+                        trigger='date',
+                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                        name="强制更新公网IP"
+                    )
                 self._forced_update = False
 
             if self._local_scan:
                 logger.info("使用本地扫码登陆")
-                self._scheduler.add_job(func=self.local_scanning, trigger='date',
-                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                        name="本地扫码登陆")  # 添加任务
+                self._scheduler.add_job(
+                    func=self.local_scanning,
+                    trigger='date',
+                    run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                    name="本地扫码登陆"
+                )
                 self._local_scan = False
 
             # 固定半小时周期请求一次地址,防止cookie失效
             try:
-                self._scheduler.add_job(func=self.refresh_cookie,
-                                        trigger=CronTrigger.from_crontab(self._refresh_cron),
-                                        name="延续企业微信cookie有效时间")
+                self._scheduler.add_job(
+                    func=self.refresh_cookie,
+                    trigger=CronTrigger.from_crontab(self._refresh_cron),
+                    name="延续企业微信cookie有效时间"
+                )
             except Exception as err:
                 logger.error(f"定时任务配置错误：{err}")
                 self.systemmessage.put(f"执行周期配置错误：{err}")
 
             if self.wan2:
                 try:
-                    self._scheduler.add_job(func=self.get_ip_from_url,
-                                            trigger=CronTrigger.from_crontab(self._cron),
-                                            name="多wan口公网IP检测")
+                    self._scheduler.add_job(
+                        func=self.get_ip_from_url,
+                        trigger=CronTrigger.from_crontab(self._cron),
+                        name="多wan口公网IP检测"
+                    )
                 except Exception as err:
                     logger.error(f"多wan口公网IP检测定时任务配置错误：{err}")
                     self.systemmessage.put(f"执行周期配置错误：{err}")
@@ -274,7 +292,7 @@ class Dydebug(_PluginBase):
             return None
 
     @eventmanager.register(EventType.PluginAction)
-    def forced_change(self, event: Event = None):
+    async def forced_change(self, event: Event = None):
         """
         强制修改IP
         """
@@ -288,73 +306,101 @@ class Dydebug(_PluginBase):
         # 先尝试cookie登陆
         context = None
         try:
-            context = self._launch_browser_context(headless=True)
+            context = await self._launch_browser_context(headless=True)
             cookie = self.get_cookie()
             if cookie:
-                context.add_cookies(cookie)
-            page = context.new_page()
-            page.goto(self._wechatUrl)
-            time.sleep(3)
+                await context.add_cookies(cookie)
+            page = await context.new_page()
+            await page.goto(self._wechatUrl)
+            await asyncio.sleep(3)
             if self.check_login_status(page, task='forced_change'):
-                self.click_app_management_buttons(page)
+                await self.click_app_management_buttons(page)
             else:
-                logger.error("cookie失效,强制修改IP失败：请使用'本地扫码修改IP'。如配置了第三方通知可以使用/push_qr")
+                logger.error("cookie失效,强制修改IP失败：请使用'本地扫码修改IP'")
                 self._cookie_valid = False
         except Exception as err:
             logger.error(f"强制修改IP失败：{err}")
         finally:
             if context:
-                context.close()
+                await context.close()
 
         logger.info("----------------------本次任务结束----------------------")
 
-    @eventmanager.register(EventType.PluginAction)
-    def local_scanning(self, event: Event = None):
-        """
-        本地扫码
-        """
-        if not self._enabled:
-            logger.error("插件未开启")
-            return
-        if event:
-            event_data = event.event_data
-            if not event_data or event_data.get("action") != "dynamicwechat":
-                return
-        context = None
+    async def check_login_status(self, page, task):
+        # 替换 time.sleep 为异步休眠
+        await asyncio.sleep(3)
+
+        if task != 'refresh_cookie':
+            logger.info("检查登录状态...")
+
+        success_selectors = [
+            "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
+            '#_hmt_click > div.index_colRight > div > div.index_info > div > a',
+            '/html/body/div/section[3]/div[1]/main/div/div/div[2]/div/div[1]/div/a',
+            '#_hmt_click > div.index_colLeft > div.index_greeting.index_explore_text > div:nth-child(1)'
+        ]
+
+        # 检查登录成功元素
         try:
-            context = self._launch_browser_context(headless=True)
-            page = context.new_page()
-            page.goto(self._wechatUrl)
-            time.sleep(3)  # 页面加载等待时间
-            img, _ = self.find_qrc(page)
-            if img:
-                current_time = datetime.now()
-                future_time = current_time + timedelta(seconds=110)
-                self._future_timestamp = int(future_time.timestamp())
-                logger.info("请重新进入插件面板扫码! 每20秒检查登录状态,最大尝试5次")
-                max_attempts = 5
-                attempt = 0
-                while attempt < max_attempts:
-                    attempt += 1
-                    # logger.info(f"第 {attempt} 次检查登录状态...")
-                    time.sleep(20)  # 每20秒检查一次
-                    if self.check_login_status(page, task='local_scanning'):
-                        self._update_cookie(page, context)  # 刷新cookie
-                        self.click_app_management_buttons(page)
-                        break
-                else:
-                    logger.info("用户可能没有扫码或登录失败")
-            else:
-                logger.error("未找到二维码,任务结束")
-            logger.info("----------------------本次任务结束----------------------")
+            for selector in success_selectors:
+                try:
+                    success_element = await page.wait_for_selector(selector, timeout=3000)
+                    if success_element:
+                        if task != 'refresh_cookie':
+                            logger.info("登录成功！")
+                        return True
+                except Exception as e:
+                    logger.debug(str(e))
+                    continue
         except Exception as e:
-            logger.error(f"本地扫码任务: 本地扫码失败: {e}")
-        finally:
-            if context:
-                context.close()
+            logger.debug(f"登录检查异常: {e}")
+
+        # 检查短信验证码面板
+        try:
+            captcha_panel = await page.wait_for_selector('.receive_captcha_panel', timeout=5000)
+            if captcha_panel:
+                if task == 'local_scanning':
+                    await asyncio.sleep(3)
+                else:
+                    logger.info("等待30秒,请将短信验证码请以'？'结束,发送到<企业微信应用> 如： 110301？")
+                    await asyncio.sleep(30)
+
+                if self._verification_code:
+                    # 逐位输入验证码
+                    for digit in self._verification_code:
+                        await page.keyboard.press(digit)
+                        await asyncio.sleep(0.3)
+
+                    confirm_button = await page.wait_for_selector('.confirm_btn', timeout=5000)
+                    await confirm_button.click()
+                    await asyncio.sleep(3)
+
+                    # 二次校验登录状态
+                    for selector in success_selectors:
+                        try:
+                            success_element = await page.wait_for_selector(selector, timeout=3000)
+                            if success_element:
+                                self._verification_code = None
+                                logger.info("验证码登录成功！")
+                                return True
+                        except:
+                            continue
+                else:
+                    logger.error(
+                        "未收到短信验证码，请以问号结尾发送到企业微信应用。如：510010? 使用全局AI助手需使用/wxcode 510010的格式发送验证码")
+                    return False
+        except Exception:
+            # 既未登录、也无验证码面板，检查是否回到二维码页面
+            qr_res, _ = await self.find_qrc(page)
+            if qr_res and task not in ['refresh_cookie', 'local_scanning']:
+                logger.warning(f"用户没有扫描二维码")
+                return False
+
+        # 默认判定未登录
+        return False
 
     @eventmanager.register(EventType.PluginAction)
-    def write_wan2_ip(self, event: Event = None):
+    async def write_wan2_ip(self, event: Event = None):
         if not self._enabled:
             logger.error("插件未开启")
             return
@@ -368,9 +414,9 @@ class Dydebug(_PluginBase):
         for url in urls:
             context = None
             try:
-                context = self._launch_browser_context(headless=url != "https://ip.skk.moe/multi")
-                page = context.new_page()
-                china_ips = self.wan2.get_ipv4(page, url)
+                context = await self._launch_browser_context(headless=url != "https://ip.skk.moe/multi")
+                page = await context.new_page()
+                china_ips = await self.wan2.get_ipv4(page, url)
                 if china_ips:
                     self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
                     self.wan2_url = url
@@ -379,10 +425,10 @@ class Dydebug(_PluginBase):
                 logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
             finally:
                 if context:
-                    context.close()
+                    await context.close()
 
     @eventmanager.register(EventType.PluginAction)
-    def check(self, event: Event = None):
+    async def check(self, event: Event = None):
         """
         检测函数
         """
@@ -395,53 +441,36 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "dynamicwechat":
                 return
 
+        # 情况1：cookie有效
         if self._cookie_valid:
             logger.info("开始检测公网IP")
-            if self.CheckIP():   # 只返回bool TRUE为需要修改IP
-                self.ChangeIP()
+            if await self.CheckIP():
+                await self.ChangeIP()
                 self.__update_config()
             logger.info("----------------------本次任务结束----------------------")
-        elif self._await_ip and not self._send_notification:
-            # logger.info("cookie已失效。但配置了第三方通知，继续检测公网IP。当IP变动企业微信通知彻底无法使用时通知用户")
-            logger.info("开始检测公网IP,等待IP变动后发送通知")
-            if self.CheckIP(func="public"):
-                # logger.info(f"配置的第三方通知{self._my_send.other_channel}")
-                for channel, token in self._my_send.other_channel:
-                    # logger.info(f"正常尝试：{channel} {token}")
-                    error = self._my_send.send(
-                        title="公网IP与企业微信IP不一致",
-                        content="请在企业微信应用发送/push_qr, 验证码以'？'结束发送到企业微信应用。",
-                        image=None, force_send=False, diy_channel=channel, diy_token=token
-                    )
-                    if error:
-                        logger.error(f"通道 {channel} 发送失败，原因：{error}")
-                    else:
-                        self._send_notification = True
-                        break  # 发送成功后退出循环
-                self._wechat_available = False  # 标记不可用
-            logger.info("----------------------本次任务结束----------------------")
-        else:
-            if self._send_notification:  # 配合以上等待IP变更功能的判断 第三方通知已通知，日志留痕
-                logger.info("cookie已失效请及时更新，微信通知可能已经无法使用。已通知第三方通知")
-            else:
-                '''
-                 配置了第三方通知 即使cookie失效也检测IP
-                 让MPV2在微信通知作为首选时，第三方通知依然可以正常作为备用
-                '''
-                if self._my_send.other_channel:
-                    logger.info("开始检测公网IP,等待IP变动后发送第三方通知")
-                    self.CheckIP()
-                    return
-                else:
-                    logger.info("cookie已失效请及时更新,本次不检查公网IP")
-                    return
+            return
 
-    def CheckIP(self, func=None):
+        # 情况2：cookie失效 + 启用IP变动后通知（有第三方通知）
+        if self._await_ip:
+            logger.info("开始检测公网IP,等待IP变动后发送通知")
+            if await self.CheckIP(func="public"):
+                self._send_cookie_false()
+            logger.info("----------------------本次任务结束----------------------")
+            return
+
+        # 情况3：cookie失效 + 不等待IP变化
+        logger.info("Cookie已失效，本次不检查IP")
+        self._send_cookie_false()
+
+    import asyncio
+
+    async def CheckIP(self, func=None):
         if self.wan2:
             ip_address = self.wan2.read_ips("url_ip")
             url = self.wan2_url
         else:
-            url, ip_address = self.get_ip_from_url()
+            # 同步调用异步函数
+            url, ip_address = await self.get_ip_from_url()
 
         if not ip_address or ip_address == "获取IP失败" or not url:
             logger.error("获取IP失败 不操作可信IP")
@@ -451,7 +480,7 @@ class Dydebug(_PluginBase):
         if url and ip_address:
             logger.info(f"IP获取成功: {url}: {ip_address}")
 
-        # 上次修改 IP 失败时，继续尝试修改
+        # 上次修改 IP 失败时，继续尝试修改IP
         if not self._ip_changed and func != "public":  # 排除cookie失效 检测公网变动的任务
             logger.info("上次IP修改IP失败 继续尝试修改IP")
             return True
@@ -497,7 +526,7 @@ class Dydebug(_PluginBase):
             self._cc_server = None
             logger.error("没有可用的CookieCloud服务器")
 
-    def get_ip_from_url(self) -> (str, str):
+    async def get_ip_from_url(self) -> (str, str):
         # 根据输入解析 URL 列表
         if isinstance(self._input_id_list, str) and "||" in self._input_id_list:
             _, url_list = self._input_id_list.split("||", 1)
@@ -526,9 +555,9 @@ class Dydebug(_PluginBase):
             for url in urls:
                 context = None
                 try:
-                    context = self._launch_browser_context(headless=url != "https://ip.skk.moe/multi")
-                    page = context.new_page()
-                    china_ips = self.wan2.get_ipv4(page, url)
+                    context = await self._launch_browser_context(headless=url != "https://ip.skk.moe/multi")
+                    page = await context.new_page()
+                    china_ips = await self.wan2.get_ipv4(page, url)
                     if china_ips:
                         self.wan2_url = url
                         self.wan2.overwrite_ips("url_ip", china_ips)  # 将获取到的IP写入文件 覆盖写入
@@ -537,51 +566,58 @@ class Dydebug(_PluginBase):
                     logger.warning(f"{url} 多出口IP获取失败, Error: {e}")
                 finally:
                     if context:
-                        context.close()
+                        await context.close()
             self.wan2_url = None
             return None, "获取IP失败"
 
-    def find_qrc(self, page):
+    async def find_qrc(self, page):
         # 查找 iframe 元素并切换到它
         try:
-            page.wait_for_selector("iframe", timeout=5000)  # 等待 iframe 加载
-            iframe_element = page.query_selector("iframe")
-            frame = iframe_element.content_frame()
+            # 异步等待 iframe
+            await page.wait_for_selector("iframe", timeout=5000)
+            iframe_element = await page.query_selector("iframe")
+            if not iframe_element:
+                logger.warning("未找到登录 iframe")
+                return None, None
 
-            # 查找二维码图片元素
-            qr_code_element = frame.query_selector("img.qrcode_login_img")
+            frame = await iframe_element.content_frame()
+            if not frame:
+                logger.warning("切换 iframe 失败")
+                return None, None
+
+            # 异步查找二维码图片
+            qr_code_element = await frame.query_selector("img.qrcode_login_img")
             if qr_code_element:
-                # logger.info("找到二维码图片元素")
-                # 保存二维码图片
-                qr_code_url = qr_code_element.get_attribute('src')
+                qr_code_url = await qr_code_element.get_attribute('src')
                 if qr_code_url.startswith("/"):
-                    qr_code_url = "https://work.weixin.qq.com" + qr_code_url  # 补全二维码 URL
+                    qr_code_url = "https://work.weixin.qq.com" + qr_code_url
 
+                # 网络请求保持同步即可
                 qr_code_data = requests.get(qr_code_url).content
                 self._qr_code_image = io.BytesIO(qr_code_data)
                 refuse_time = (datetime.now() + timedelta(seconds=115)).strftime("%Y-%m-%d %H:%M:%S")
                 return qr_code_url, refuse_time
             else:
-                logger.warning("未找到二维码")
+                logger.warning("iframe 内未找到二维码图片")
                 return None, None
         except Exception as e:
-            logger.debug(str(e))
+            logger.debug(f"查找二维码异常: {str(e)}")
             return None, None
 
-    def ChangeIP(self):
+    async def ChangeIP(self):
         logger.info("开始请求企业微信管理更改可信IP")
         context = None
         try:
-            context = self._launch_browser_context(headless=True)
+            context = await self._launch_browser_context(headless=True)
             cookie = self.get_cookie()
             if cookie:
-                context.add_cookies(cookie)
-            page = context.new_page()
-            page.goto(self._wechatUrl)
-            time.sleep(3)
-            img_src, refuse_time = self.find_qrc(page)
+                await context.add_cookies(cookie)
+            page = await context.new_page()
+            await page.goto(self._wechatUrl)
+            await asyncio.sleep(3)
+            img_src, refuse_time = await self.find_qrc(page)
             if img_src:
-                if self._my_send:   # 统一逻辑,只有用户发送'/push_qr'才会发送二维码
+                if self._my_send:  # 统一逻辑,只有用户发送'/push_qr'才会发送二维码
                     self._ip_changed = False
                     self._send_cookie_false()
                     logger.info("已尝试发送cookie失效通知")
@@ -592,7 +628,7 @@ class Dydebug(_PluginBase):
             else:  # 如果直接进入企业微信
                 logger.info("尝试cookie登录")
                 if self.check_login_status(page, ""):
-                    self.click_app_management_buttons(page)
+                    await await self.click_app_management_buttons(page)
                 else:
                     logger.info("发生了意料之外的错误,请附上配置信息到github反馈")
                     self._send_cookie_false()
@@ -602,37 +638,42 @@ class Dydebug(_PluginBase):
             logger.error(f"更改可信IP失败: {e}")
         finally:
             if context:
-                context.close()
+                await context.close()
 
-    def _update_cookie(self, page, context):
-        self._future_timestamp = 0  # 标记二维码失效
-        PyCookieCloud.save_cookie_lifetime(self._settings_file_path, 0)  # 重置cookie存活时间
+    async def _update_cookie(self, page, context):
+        self._future_timestamp = 0
+        PyCookieCloud.save_cookie_lifetime(self._settings_file_path, 0)
+
         if self._use_cookiecloud:
-            if not self._cc_server:  # 连接失败返回 False
-                self.try_connect_cc()  # 再尝试一次连接
+            if not self._cc_server:
+                self.try_connect_cc()
                 if self._cc_server is None:
                     return
+
             logger.info("使用二维码登录成功,开始刷新cookie")
             try:
                 if not self._cc_server.check_connection():
-                    logger.error("连接 CookieCloud 失败", self._server)
+                    logger.error("连接 CookieCloud 失败")
                     return
+
                 current_url = page.url
-                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-                if current_cookies is None:
+                # 异步获取 cookie
+                current_cookies = await context.cookies([current_url])
+                if not current_cookies:
                     logger.error("无法从内置浏览器获取 cookies")
                     self._cookie_valid = False
                     return
+
                 self._saved_cookie = current_cookies
                 formatted_cookies = {}
                 for cookie in current_cookies:
-                    domain = cookie.get('domain')  # 使用 get() 方法避免 KeyError
+                    domain = cookie.get('domain')
                     if domain is None:
-                        continue  # 跳过没有 domain 的 cookie
-
+                        continue
                     if domain not in formatted_cookies:
                         formatted_cookies[domain] = []
                     formatted_cookies[domain].append(cookie)
+
                 if self._cc_server.update_cookie(formatted_cookies):
                     logger.info("更新 CookieCloud 成功，如没有CC服务器同步cookie请不要在其他地方登录企业微信")
                     self._cookie_valid = True
@@ -649,17 +690,17 @@ class Dydebug(_PluginBase):
         else:
             try:
                 current_url = page.url
-                current_cookies = context.cookies(current_url)  # 通过 context 获取 cookies
-                if current_cookies is None:
+                current_cookies = await context.cookies([current_url])
+                if not current_cookies:
                     self._send_cookie_false()
                     logger.error("更新本地 Cookie失败")
                     self._is_special_upload = False
                     return
-                else:
-                    logger.info("更新本地 Cookie成功，请不要在其他地方登录企业微信")
-                    self._is_special_upload = True
-                    self._saved_cookie = current_cookies  # 保存
-                    self._cookie_valid = True
+
+                logger.info("更新本地 Cookie成功，请不要在其他地方登录企业微信")
+                self._is_special_upload = True
+                self._saved_cookie = current_cookies
+                self._cookie_valid = True
             except Exception as e:
                 self._send_cookie_false()
                 logger.error(f"更新本地 cookie 发生错误: {e}")
@@ -712,44 +753,39 @@ class Dydebug(_PluginBase):
             })
         return cookies
 
-    def refresh_cookie(self):  # 保活
+    async def refresh_cookie(self):
         context = None
         try:
-            context = self._launch_browser_context(headless=True)
+            # 异步调用，必须加 await
+            context = await self._launch_browser_context(headless=True)
             cookie_used = False
             if self._saved_cookie:
-                # logger.info("尝试使用内存保存的 cookie")
-                context.add_cookies(self._saved_cookie)
-                page = context.new_page()
-                page.goto(self._wechatUrl)
-                time.sleep(3)
-                if self.check_login_status(page, task='refresh_cookie'):
-                    # logger.info("本地内存保存的 cookie 有效")
+                await context.add_cookies(self._saved_cookie)
+                page = await context.new_page()
+                await page.goto(self._wechatUrl)
+                await asyncio.sleep(3)  # 改用异步休眠
+                if await self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = True
                     cookie_used = True
                 else:
-                    # logger.warning("本地内存保存的 cookie 无效")
                     self._cookie_valid = False
-                    self._saved_cookie = None  # 清空无效的 cookie
+                    self._saved_cookie = None
 
             if not cookie_used and self._use_cookiecloud:
-                # logger.info("尝试从CookieCloud 获取新的 cookie")
                 cookie = self.get_cookie()
                 if not cookie:
                     self._send_cookie_false()
                     return
-                context.add_cookies(cookie)
-                page = context.new_page()
-                page.goto(self._wechatUrl)
-                time.sleep(3)
-                if self.check_login_status(page, task='refresh_cookie'):
-                    # logger.info("新获取的 cookie 有效")
+                await context.add_cookies(cookie)
+                page = await context.new_page()
+                await page.goto(self._wechatUrl)
+                await asyncio.sleep(3)
+                if await self.check_login_status(page, task='refresh_cookie'):
                     self._cookie_valid = True
-                    self._saved_cookie = context.cookies()  # 保存有效的 cookie
+                    self._saved_cookie = await context.cookies()
                 else:
-                    # logger.warning("新获取的 cookie 无效")
                     self._send_cookie_false()
-                    self._saved_cookie = None  # 清空无效的 cookie
+                    self._saved_cookie = None
 
             if self._cookie_valid:
                 if self._my_send:
@@ -758,97 +794,32 @@ class Dydebug(_PluginBase):
                 self._cookie_lifetime = PyCookieCloud.load_cookie_lifetime(self._settings_file_path)
         except Exception as e:
             self._send_cookie_false()
-            self._saved_cookie = None  # 异常时清空 cookie
+            self._saved_cookie = None
             logger.error(f"cookie 校验过程中发生异常: {e}")
         finally:
             if context:
-                context.close()
+                await context.close()  # 异步 close 也要 await
 
-    #
-    def check_login_status(self, page, task):
-        # 等待页面加载
-        time.sleep(3)
-        # 检查是否需要进行短信验证
-        if task != 'refresh_cookie':
-            logger.info("检查登录状态...")
-
-        success_selectors = [
-            "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
-            '#_hmt_click > div.index_colRight > div > div.index_info > div > a',
-            '/html/body/div/section[3]/div[1]/main/div/div/div[2]/div/div[1]/div/a',
-            '#_hmt_click > div.index_colLeft > div.index_greeting.index_explore_text > div:nth-child(1)'
-        ]
-
-        try:
-            for selector in success_selectors:
-                try:
-                    # 先检查登录成功后的页面状态
-                    success_element = page.wait_for_selector(selector, timeout=3000)  # 检查登录成功的元素
-                    if success_element:
-                        if task != 'refresh_cookie':
-                            logger.info("登录成功！")
-                        return True
-                except Exception as e:
-                    logger.debug(str(e))
-                    pass
-        except Exception as e:
-            logger.debug(f"登录检查异常: {e}")
-
-        try:
-            # 检查是否进入验证码界面
-            captcha_panel = page.wait_for_selector('.receive_captcha_panel', timeout=5000)  # 检查验证码面板
-            if captcha_panel:  # 出现了短信验证界面
-                if task == 'local_scanning':
-                    time.sleep(3)
-                else:
-                    logger.info("等待30秒,请将短信验证码请以'？'结束,发送到<企业微信应用> 如： 110301？")
-                    time.sleep(30)  # 多等30秒
-                if self._verification_code:
-                    # logger.info("输入验证码：" + self._verification_code)
-                    for digit in self._verification_code:
-                        page.keyboard.press(digit)
-                        time.sleep(0.3)  # 每个数字之间添加少量间隔以确保输入顺利
-                    confirm_button = page.wait_for_selector('.confirm_btn', timeout=5000)  # 获取确认按钮
-                    confirm_button.click()  # 点击确认
-                    time.sleep(3)  # 等待处理
-
-                    # 再次检查登录状态
-                    for selector in success_selectors:
-                        try:
-                            success_element = page.wait_for_selector(selector, timeout=3000)
-                            if success_element:
-                                self._verification_code = None
-                                logger.info("验证码登录成功！")
-                                return True
-                        except:
-                            continue
-                else:
-                    logger.error("未收到短信验证码，请以问号结尾发送到企业微信应用。如：510010?")
-                    return False
-        except Exception as e:
-            # logger.debug(str(e))  # 基于bug运行,请不要将错误输出到日志
-            # try:  # 没有登录成功,也没有短信验证码
-            if self.find_qrc(page) and task not in ['refresh_cookie', 'local_scanning']:  # 延长任务找到的二维码不会被发送,所以不算用户没有扫码
-                logger.warning(f"用户没有扫描二维码")
-                return False
-
-    def click_app_management_buttons(self, page):
+    async def click_app_management_buttons(self, page):
         self._cookie_valid = True
         if self._my_send:
-            self._my_send.reset_limit()  # 解除限制 可以发送cookie失效提醒
+            self._my_send.reset_limit()
+
         bash_url = "https://work.weixin.qq.com/wework_admin/frame#apps/modApiApp/"
-        # 按钮的选择器和名称
         buttons = [
-            # ("//span[@class='frame_nav_item_title' and text()='应用管理']", "应用管理"),
-            # ("//div[@class='app_index_item_title ' and contains(text(), 'MoviePilot')]", "MoviePilot"),
             (
                 "//div[contains(@class, 'js_show_ipConfig_dialog')]//a[contains(@class, '_mod_card_operationLink') and text()='配置']",
-                "配置")
+                "配置"
+            )
         ]
-        if self.wan2:  # 多wan口从文件读取 ip
+
+        # 获取当前IP
+        if self.wan2:
             self._current_ip_address = self.wan2.read_ips("ips")
         else:
-            _, self._current_ip_address = self.get_ip_from_url()
+            _, self._current_ip_address = await self.get_ip_from_url()
+
+        # 解析应用ID列表
         if "||" in self._input_id_list:
             parts = self._input_id_list.split("||", 1)
             input_id_list = parts[0]
@@ -856,51 +827,57 @@ class Dydebug(_PluginBase):
             input_id_list = self._input_id_list
         id_list = input_id_list.split(",")
         app_urls = [f"{bash_url}{app_id.strip()}" for app_id in id_list]
+
         for app_url in app_urls:
             app_id = app_url.split("/")[-1]
             if app_id.startswith("100000") and len(app_id) == 7:
                 self._ip_changed = False
-                logger.warning(f"请根据 https://github.com/RamenRa/MoviePilot-Plugins 的说明进行配置应用ID")
+                logger.warning("请根据文档说明配置正确应用ID")
                 return
-            page.goto(app_url)  # 打开应用详情页
-            time.sleep(2)
-            # 依次点击每个按钮
+
+            # 异步跳转页面
+            await page.goto(app_url)
+            await asyncio.sleep(2)
+
             for xpath, name in buttons:
-                # 等待按钮出现并可点击
                 try:
-                    button = page.wait_for_selector(xpath, timeout=5000)  # 等待按钮可点击
-                    button.click()
-                    # logger.info(f"已点击 '{name}' 按钮")
-                    page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
-                    # logger.info(f"已找到文本框")
+                    # 异步等待并获取按钮
+                    button = await page.wait_for_selector(xpath, timeout=5000)
+                    await button.click()
+
+                    # 等待IP输入框
+                    await page.wait_for_selector('textarea.js_ipConfig_textarea', timeout=5000)
                     input_area = page.locator('textarea.js_ipConfig_textarea')
                     confirm = page.locator('.js_ipConfig_confirmBtn')
-                    # logger.info(f"即将输入的内容：'{input_ip}'")
-                    input_area.fill(self._current_ip_address)  # 填充 IP 地址
-                    confirm.click()  # 点击确认按钮
-                    time.sleep(3)  # 等待处理
+
+                    # 填充IP + 确认
+                    await input_area.fill(self._current_ip_address)
+                    await confirm.click()
+                    await asyncio.sleep(3)
+
                     self._ip_changed = True
                 except Exception as e:
-                    logger.error(f"未能找打开{app_url}或点击 '{name}' 按钮异常: {e}")
+                    logger.error(f"未能打开{app_url}或点击 '{name}' 按钮异常: {e}")
                     self._ip_changed = False
                     if "disabled" in str(e):
                         logger.info(f"应用{app_id} 已被禁用,可能是没有设置接收api")
+
             if self._ip_changed:
-                self._wechat_available = True    # 标记微信通知重新有效
-                self._send_notification = False  # 重置第三方通知已发送标记
+                self._wechat_available = True
+                self._send_notification = False
                 self.cfg.update("WECHAT_NOW_IP", self._current_ip_address)
-                '''
-                将填入企业微信的IP写入settings.json 
-                应对MP/NAS长时间关闭后公网IP和可信IP不一致
-                '''
-                # self.wan2 = IpLocationParser(self._settings_file_path, max_ips=1)
+
                 masked_ips = [self.mask_ip(ip) for ip in self._current_ip_address.split(';')]
                 masked_ip_string = ";".join(masked_ips)
-                logger.info(f"应用: {app_id} 输入IP：" + self._current_ip_address)
-                if self._my_send and not self._my_send.quiet_flag:  # 没有开启安静模式才发通知
-                    self._my_send.send(title="更新可信IP成功",
-                                       content='应用: ' + app_id + ' 输入IP：' + masked_ip_string,
-                                       force_send=True, diy_channel="WeChat")
+                logger.info(f"应用: {app_id} 输入IP：{self._current_ip_address}")
+
+                if self._my_send and not self._my_send.quiet_flag:
+                    self._my_send.send(
+                        title="更新可信IP成功",
+                        content=f'应用: {app_id} 输入IP：{masked_ip_string}',
+                        force_send=True,
+                        diy_channel="WeChat"
+                    )
 
     @staticmethod
     def mask_ip(ip):
@@ -1294,7 +1271,7 @@ class Dydebug(_PluginBase):
         return base_content
 
     @eventmanager.register(EventType.PluginAction)
-    def push_qr_code(self, event: Event = None):
+    async def push_qr_code(self, event: Event = None):
         """
         立即发送二维码
         """
@@ -1305,22 +1282,20 @@ class Dydebug(_PluginBase):
             if not event_data or event_data.get("action") != "push_qrcode":
                 return
         if self._qr_running:
-            # logger.warning("二维码任务正在执行，忽略重复触发")
             return
         self._qr_running = True
 
         context = None
         try:
-            context = self._launch_browser_context(headless=True)
-            page = context.new_page()
-            page.goto(self._wechatUrl)
-            time.sleep(3)
-            image_src, refuse_time = self.find_qrc(page)
+            context = await self._launch_browser_context(headless=True)
+            page = await context.new_page()
+            await page.goto(self._wechatUrl)
+            await asyncio.sleep(3)
+            image_src, refuse_time = await self.find_qrc(page)
             if image_src:
                 if self._my_send:
-                    if not self._wechat_available and self._my_send.other_channel:     # 微信通知已经无法使用,但是配置了第三方通知
+                    if not self._wechat_available and self._my_send.other_channel:
                         for channel, token in self._my_send.other_channel:
-                            # logger.info(f"正常尝试：{channel} {token}")
                             error = self._my_send.send(
                                 title="企业微信登录二维码",
                                 image=image_src, diy_channel=channel, diy_token=token
@@ -1329,19 +1304,25 @@ class Dydebug(_PluginBase):
                                 logger.warning(f"通道 {channel} 推送二维码失败，原因：{error}")
                             else:
                                 break  # 发送成功后退出循环
-                    else:  # 只配置了微信通知 硬发
+                    else:
                         error = self._my_send.send("企业微信登录二维码", image=image_src)
                         if error:
                             logger.info(f"远程推送任务: 二维码发送失败,原因：{error}")
                             logger.info("----------------------本次任务结束----------------------")
                             return
-                    logger.info("远程推送任务: 二维码发送成功,等待用户 90 秒内扫码登录。V2'微信通知'的用户,此消息并不准确")
-                    # logger.info("远程推送任务: 如收到短信验证码请以？结束,发送到<企业微信应用> 如： 110301？")
-                    time.sleep(90)
-                    if self.check_login_status(page, 'push_qr_code'):
-                        self._update_cookie(page, context)  # 刷新cookie
-                        # logger.info("远程推送任务: 没有可用的CookieCloud服务器,只修改可信IP")
-                        self.click_app_management_buttons(page)
+                    logger.info(
+                        "远程推送任务: 二维码发送成功,等待用户 80 秒内扫码登录。V2'微信通知'的用户,此消息并不准确")
+                    max_attempts = 4
+                    attempt = 0
+                    while attempt < max_attempts:
+                        await asyncio.sleep(20)
+                        attempt += 1
+                        if await self.check_login_status(page, 'push_qr_code'):
+                            await self._update_cookie(page, context)  # 刷新cookie
+                            await self.click_app_management_buttons(page)
+                            break
+                        else:
+                            logger.info("用户可能没有扫码或登录失败")
                 else:
                     logger.warning("远程推送任务: 没有找到可用的通知方式")
             else:
@@ -1351,8 +1332,44 @@ class Dydebug(_PluginBase):
             logger.error(f"远程推送任务: 推送二维码失败: {e}")
         finally:
             if context:
-                context.close()
+                await context.close()
             self._qr_running = False
+
+    @eventmanager.register(EventType.PluginAction)
+    def receive_code(self, event: Event = None):
+        """
+        接收企业微信验证码
+        """
+        if not self._enabled or not event:
+            return
+
+        event_data = event.event_data or {}
+
+        if event_data.get("action") != "wxcode":
+            return
+        if not self._qr_running:
+            return
+        raw = event_data.get("arg_str") or ""
+
+        # 去掉无效日志噪音（只在调试时保留）
+        # logger.info(f"完整event_data: {event_data}")
+        # logger.info(f"原始内容: {raw}")
+
+        match = re.search(r"\d{6}", raw)
+        if not match:
+            logger.warning(f"收到无效验证码: {raw}")
+            return
+
+        code = match.group(0)
+
+        # 防重复接收（关键优化）
+        if getattr(self, "_last_code", None) == code:
+            return
+
+        self._last_code = code
+        self._verification_code = code
+
+        logger.info(f"收到验证码：{code}")
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -1364,6 +1381,15 @@ class Dydebug(_PluginBase):
                 "category": "",
                 "data": {
                     "action": "push_qrcode"
+                }
+            },
+            {
+                "cmd": "/wxcode",
+                "event": EventType.PluginAction,
+                "desc": "提交企业微信验证码",
+                "category": "",
+                "data": {
+                    "action": "wxcode"
                 }
             }
         ]
@@ -1378,12 +1404,18 @@ class Dydebug(_PluginBase):
         """
         if not self._enabled:
             return
+        if not self._qr_running:
+            return
         self.text = event.event_data.get("text")
         if len(self.text) == 7 and re.fullmatch(r".*\d{6}.*", self.text):
             match = re.search(r"\d{6}", self.text)
             if match:
-                self._verification_code = match.group(0)
-                logger.info(f"收到验证码：{self._verification_code}")
+                code = match.group(0)
+                # self._verification_code = match.group(0)
+                if code != self._last_code:
+                    self._verification_code = code
+                    self._last_code = code
+                    logger.info(f"收到验证码：{code}")
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
