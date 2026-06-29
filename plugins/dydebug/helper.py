@@ -340,7 +340,7 @@ class IpLocationParser:
         self._ips = self.read_ips("ips")  # 初始化时读取已存储的 IP 地址
 
     @staticmethod
-    def _parse(page, url):
+    async def _parse(page, url):
         # 定义 URL 到解析函数的映射
         parser_methods = {
             "https://ip.orz.tools": IpLocationParser._parse_ip_orz_tools,
@@ -350,7 +350,7 @@ class IpLocationParser:
         parser_method = parser_methods.get(url)
         if parser_method is None:
             return [], []
-        return parser_method(page)
+        return await parser_method(page)
 
     @staticmethod
     def _remove_duplicates(ipv4_addresses, locations):
@@ -373,13 +373,13 @@ class IpLocationParser:
         return re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip) is not None
 
     @staticmethod
-    def _parse_ip_orz_tools(page):
-        rows = page.query_selector_all('#results3 .row')
+    async def _parse_ip_orz_tools(page):
+        rows = await page.query_selector_all('#results3 .row')
         # print(f"ip_orz_tools共找到 {len(rows)} 行数据")
         ipv4_addresses, locations = [], []
 
         for i, row in enumerate(rows):
-            row_html = row.inner_html()
+            row_html = await row.inner_html()
 
             # 提取 IP 地址
             ip_match = re.search(r'data-name="([^"]+)"', row_html)
@@ -391,8 +391,8 @@ class IpLocationParser:
                 continue
 
             # 提取位置数据
-            loc_element = row.query_selector('.loc.cell')
-            location = loc_element.inner_text().strip() if loc_element else "未知"
+            loc_element = await row.query_selector('.loc.cell')
+            location = (await loc_element.inner_text()).strip() if loc_element else "未知"
 
             ipv4_addresses.append(ip)
             locations.append(location)
@@ -400,8 +400,8 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def _parse_ip_skk_moe(page):
-        rows = page.query_selector_all(
+    async def _parse_ip_skk_moe(page):
+        rows = await page.query_selector_all(
             'body > div > section > div.x1n2onr6.xw2csxc.x10fe3q7.x116uinm.xdpxx8g > table > tbody > tr'
         )
         # print(f"skk共找到 {len(rows)} 行数据")
@@ -412,10 +412,10 @@ class IpLocationParser:
             loc_element = row.query_selector('td:nth-child(3)')  # 假设归属地在第 3 列
 
             if ip_element and loc_element:
-                ip = ip_element.inner_text().strip()
+                ip = (await ip_element.inner_text()).strip()
                 if not IpLocationParser._is_valid_ipv4(ip):
                     continue
-                location = loc_element.inner_text().strip()
+                location = (await loc_element.inner_text()).strip()
 
                 ipv4_addresses.append(ip)
                 locations.append(location)
@@ -423,16 +423,16 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def _parse_ip_m27(page):
+    async def _parse_ip_m27(page):
         """解析 https://ip.m27.tech 页面中的 IP 和归属地"""
-        rows = page.query_selector_all(
+        rows = await page.query_selector_all(
             'body > div > div.panel.panel-success > div.panel-body > table > tbody > tr'
         )
         # print(f"共找到 {len(rows)} 行数据")
         ipv4_addresses, locations = [], []
 
         for row in rows:
-            row_text = row.inner_text().strip()
+            row_text = (await row.inner_text()).strip()
             # 提取 IP 地址
             ip_match = re.search(r'(\d+\.\d+\.\d+\.\d+)', row_text)
             if ip_match:
@@ -452,14 +452,14 @@ class IpLocationParser:
         return IpLocationParser._remove_duplicates(ipv4_addresses, locations)
 
     @staticmethod
-    def get_ipv4(page, url: str) -> str:
+    async def get_ipv4(page, url: str) -> str:
         """返回多个中国 IP 地址，逗号分隔"""
         # 导航到目标页面
-        page.goto(url)
+        await page.goto(url)
         # 等待一段时间，让所有动态渲染的内容加载完成
-        page.wait_for_timeout(8000)  # 等待 8 秒钟
+        await page.wait_for_timeout(8000)  # 等待 8 秒钟
         # 调用解析器解析数据
-        ipv4_addresses, locations = IpLocationParser._parse(page, url)
+        ipv4_addresses, locations = await IpLocationParser._parse(page, url)
         # 筛选出属于中国的 IP 地址
         china_ips = [
             ip for ip, location in zip(ipv4_addresses, locations)
