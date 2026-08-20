@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.1.6"
+    plugin_version = "2.1.7"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1069,7 +1069,7 @@ class Dydebug(_PluginBase):
                 return None
             return cookie
         except Exception:
-            logger.exception(f"从CookieCloud获取cookie错误)
+            logger.exception(f"从CookieCloud获取cookie错误")
             return None
 
     def parse_cookie_header(self, cookie_header):
