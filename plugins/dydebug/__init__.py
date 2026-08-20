@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.1.8"
+    plugin_version = "2.1.9"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1049,28 +1049,28 @@ class Dydebug(_PluginBase):
         """
         if self._saved_cookie and self._cookie_valid:
             return self._saved_cookie
-        try:
-            if not self._use_cookiecloud:
-                return None
-            cookies, msg = await asyncio.to_thread(self._cookiecloud.download)
-            if not cookies:
-                logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
-                return None
-            cookie_header = ''
-            for domain, cookie in cookies.items():
-                if domain == ".work.weixin.qq.com":
-                    cookie_header = cookie
-                    break
-            if not cookie_header:
-                cookie_header = self._cookie_header
-            cookie = self.parse_cookie_header(cookie_header)
-            if not cookie:
-                logger.error("企业微信Cookie解析失败：解析结果为空")
-                return None
-            return cookie
-        except Exception as e:
-            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
+        
+        if not self._use_cookiecloud:
             return None
+        cookies, msg = await asyncio.to_thread(self._cookiecloud.download)
+        if not cookies:
+            logger.error(f"CookieCloud获取cookie失败,失败原因：{msg}")
+            return None
+        cookie_header = ''
+        for domain, cookie in cookies.items():
+            if domain == ".work.weixin.qq.com":
+                cookie_header = cookie
+                break
+        if not cookie_header:
+            cookie_header = self._cookie_header
+        cookie = self.parse_cookie_header(cookie_header)
+        if not cookie:
+            logger.error("企业微信Cookie解析失败：解析结果为空")
+            return None
+        return cookie
+        # except Exception as e:
+        #     logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
+            # return None
 
     def parse_cookie_header(self, cookie_header):
         """
