@@ -1068,8 +1068,8 @@ class Dydebug(_PluginBase):
                 logger.error("企业微信Cookie解析失败：解析结果为空")
                 return None
             return cookie
-        except Exception as e:
-            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
+        except Exception:
+            logger.exception(f"从CookieCloud获取cookie错误)
             return None
 
     def parse_cookie_header(self, cookie_header):
