@@ -31,7 +31,7 @@ class Dydebug(_PluginBase):
     # 插件图标
     plugin_icon = "Wecom_A.png"
     # 插件版本
-    plugin_version = "2.1.7"
+    plugin_version = "2.1.8"
     # 插件作者
     plugin_author = "RamenRa"
     # 作者主页
@@ -1068,8 +1068,8 @@ class Dydebug(_PluginBase):
                 logger.error("企业微信Cookie解析失败：解析结果为空")
                 return None
             return cookie
-        except Exception:
-            logger.exception(f"从CookieCloud获取cookie错误")
+        except Exception as e:
+            logger.error(f"从CookieCloud获取cookie错误,错误原因:{e}")
             return None
 
     def parse_cookie_header(self, cookie_header):
