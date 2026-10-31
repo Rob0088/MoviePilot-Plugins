@@ -1,4 +1,4 @@
-# 隧道在线带宽让位（TunnelYield）
+# 隧道在线带宽释放（TunnelYield）
 
 MoviePilot V3 插件。当"有人需要用网"时，自动为下载器让出上传带宽；用网结束后自动恢复。
 
